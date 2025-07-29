@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 MAO游戏 - 全中奖盈利转盘</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #e60073; }
+            to { text-shadow: 0 0 10px #fff, 0 0 20px #ff4da6, 0 0 30px #ff4da6; }
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.3em;
+        }
+        
+        .wallet-section {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .wallet-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .wallet-btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .wallet-info {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #2c3e50;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1em;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        .game-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .wheel-container {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .wheel {
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #ff6b6b 0deg 36deg,
+                #4ecdc4 36deg 72deg,
+                #45b7d1 72deg 108deg,
+                #96ceb4 108deg 144deg,
+                #feca57 144deg 180deg,
+                #ff9ff3 180deg 216deg,
+                #54a0ff 216deg 252deg,
+                #5f27cd 252deg 288deg,
+                #00d2d3 288deg 324deg,
+                #ff9f43 324deg 360deg
+            );
+            margin: 0 auto 20px;
+            position: relative;
+            transition: transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border: 8px solid #fff;
+        }
+        
+        .wheel.spinning {
+            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(1440deg); }
+        }
+        
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: #2c3e50;
+            border-radius: 50%;
+            border: 8px solid #fff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .wheel-pointer {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #e74c3c;
+            z-index: 10;
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.3));
+        }
+        
+        .game-controls {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .token-selector {
+            margin-bottom: 30px;
+        }
+        
+        .token-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .token-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .token-btn.active {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            transform: scale(1.05);
+        }
+        
+        .play-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 25px 50px;
+            border-radius: 35px;
+            font-size: 1.4em;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin: 20px 0;
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .play-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .play-btn:hover::before {
+            left: 100%;
+        }
+        
+        .play-btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .play-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .reward-display {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .reward-amount {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 10px;
+            animation: bounce 0.6s ease-out;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .reward-level {
+            font-size: 1.3em;
+            color: #8e44ad;
+            font-weight: bold;
+        }
+        
+        .stats-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .reward-levels {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .reward-levels h2 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .reward-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .reward-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .reward-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .reward-card.special {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border: 3px solid #ff6b6b;
+            animation: sparkle 2s infinite;
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); }
+            50% { box-shadow: 0 5px 25px rgba(255, 215, 0, 0.5); }
+        }
+        
+        .reward-card.first {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            border: 3px solid #ff6b6b;
+        }
+        
+        .reward-card.second {
+            background: linear-gradient(135deg, #cd7f32, #daa520);
+            border: 3px solid #ff6b6b;
+        }
+        
+        .reward-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .reward-probability {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .reward-amount {
+            font-size: 1em;
+            color: #27ae60;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .reward-multiplier {
+            color: #8e44ad;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .social-section {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .social-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .social-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .social-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .social-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.3s ease;
+        }
+        
+        .social-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .history-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.3s ease;
+        }
+        
+        .history-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .profit {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .loss {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .user-level {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .level-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+        }
+        
+        .level-bronze { background: linear-gradient(135deg, #cd7f32, #daa520); }
+        .level-silver { background: linear-gradient(135deg, #c0c0c0, #e8e8e8); color: #333; }
+        .level-gold { background: linear-gradient(135deg, #ffd700, #ffed4e); color: #333; }
+        .level-platinum { background: linear-gradient(135deg, #e5e4e2, #b4b4b4); }
+        .level-diamond { background: linear-gradient(135deg, #b9f2ff, #00d4ff); }
+        
+        @media (max-width: 768px) {
+            .game-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .wheel {
+                width: 280px;
+                height: 280px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f00;
+            animation: confetti-fall 3s linear infinite;
+        }
+        
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); }
+            100% { transform: translateY(100vh) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 MAO游戏 - 全中奖盈利转盘</h1>
+            <p>所有中奖都有盈利，让每个玩家都成为赢家！</p>
+        </div>
+        
+        <div class="wallet-section">
+            <h3>🔗 连接钱包</h3>
+            <button class="wallet-btn" onclick="connectWallet()">连接 MetaMask</button>
+            <button class="wallet-btn" onclick="connectTPWallet()">连接 TP 钱包</button>
+            <div class="wallet-info" id="walletInfo">请先连接钱包开始游戏</div>
+        </div>
+        
+        <div class="highlight">
+            🎉 革命性创新：所有6个奖励等级都有盈利，中奖率50%，最高100倍奖励！
+        </div>
+        
+        <div class="user-level" id="userLevel" style="display: none;">
+            <h3>👤 用户等级</h3>
+            <div class="level-badge level-bronze" id="levelBadge">青铜</div>
+            <p>游戏次数: <span id="gameCount">0</span> | 奖励加成: <span id="bonusRate">0%</span></p>
+        </div>
+        
+        <div class="game-section">
+            <div class="wheel-container">
+                <h2>🎰 幸运转盘</h2>
+                <div class="wheel" id="wheel">
+                    <div class="wheel-center"></div>
+                </div>
+                <div class="wheel-pointer"></div>
+                <div class="reward-display" id="rewardDisplay" style="display: none;">
+                    <div class="reward-amount" id="rewardAmount"></div>
+                    <div class="reward-level" id="rewardLevel"></div>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <h2>🎮 游戏控制</h2>
+                
+                <div class="token-selector">
+                    <h3>选择代币类型</h3>
+                    <button class="token-btn active" onclick="selectToken('MAO')">MAO游戏 (100 MAO)</button>
+                    <button class="token-btn" onclick="selectToken('PI')">PI游戏 (1000 PI)</button>
+                </div>
+                
+                <div class="play-btn-container">
+                    <button class="play-btn" id="playBtn" onclick="playGame()" disabled>
+                        🔗 请先连接钱包
+                    </button>
+                </div>
+                
+                <div class="game-info">
+                    <h3>🎯 游戏信息</h3>
+                    <p><strong>当前选择:</strong> <span id="currentToken">MAO</span></p>
+                    <p><strong>游戏费用:</strong> <span id="gameCost">100 MAO</span></p>
+                    <p><strong>中奖率:</strong> 50%</p>
+                    <p><strong>最大奖励:</strong> 100倍</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-section">
+            <h2>📊 游戏统计</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalGames">0</div>
+                    <div class="stat-label">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalWins">0</div>
+                    <div class="stat-label">中奖次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="winRate">0%</div>
+                    <div class="stat-label">中奖率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalProfit">0</div>
+                    <div class="stat-label">总盈亏</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="reward-levels">
+            <h2>🏆 奖励等级</h2>
+            <div class="reward-grid">
+                <div class="reward-card special">
+                    <div class="reward-name">特等奖</div>
+                    <div class="reward-probability">概率: 0.1%</div>
+                    <div class="reward-amount">10000 MAO / 100000 PI</div>
+                    <div class="reward-multiplier">100倍盈利</div>
+                </div>
+                
+                <div class="reward-card first">
+                    <div class="reward-name">一等奖</div>
+                    <div class="reward-probability">概率: 0.5%</div>
+                    <div class="reward-amount">2000 MAO / 20000 PI</div>
+                    <div class="reward-multiplier">20倍盈利</div>
+                </div>
+                
+                <div class="reward-card second">
+                    <div class="reward-name">二等奖</div>
+                    <div class="reward-probability">概率: 2%</div>
+                    <div class="reward-amount">500 MAO / 5000 PI</div>
+                    <div class="reward-multiplier">5倍盈利</div>
+                </div>
+                
+                <div class="reward-card">
+                    <div class="reward-name">三等奖</div>
+                    <div class="reward-probability">概率: 5%</div>
+                    <div class="reward-amount">200 MAO / 2000 PI</div>
+                    <div class="reward-multiplier">2倍盈利</div>
+                </div>
+                
+                <div class="reward-card">
+                    <div class="reward-name">四等奖</div>
+                    <div class="reward-probability">概率: 15%</div>
+                    <div class="reward-amount">110 MAO / 1100 PI</div>
+                    <div class="reward-multiplier">1.1倍盈利</div>
+                </div>
+                
+                <div class="reward-card">
+                    <div class="reward-name">安慰奖</div>
+                    <div class="reward-probability">概率: 27.4%</div>
+                    <div class="reward-amount">101 MAO / 1010 PI</div>
+                    <div class="reward-multiplier">1.01倍盈利</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="social-section">
+            <h2>🌐 社交功能</h2>
+            <div class="social-grid">
+                <div class="social-card">
+                    <h3>📢 分享游戏</h3>
+                    <button class="social-btn" onclick="shareGame()">分享到微信</button>
+                    <button class="social-btn" onclick="shareGame()">分享到QQ</button>
+                    <button class="social-btn" onclick="shareGame()">分享到微博</button>
+                </div>
+                
+                <div class="social-card">
+                    <h3>👥 邀请好友</h3>
+                    <button class="social-btn" onclick="inviteFriend()">生成邀请码</button>
+                    <button class="social-btn" onclick="showReferral()">查看邀请记录</button>
+                    <p>邀请好友获得额外奖励！</p>
+                </div>
+                
+                <div class="social-card">
+                    <h3>🏆 排行榜</h3>
+                    <button class="social-btn" onclick="showLeaderboard()">查看排行榜</button>
+                    <button class="social-btn" onclick="showAchievements()">查看成就</button>
+                    <p>与好友比拼，争夺榜首！</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="history-section">
+            <h3>📜 游戏历史</h3>
+            <div id="gameHistory"></div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏配置
+        const rewardLevels = [
+            { name: "特等奖", probability: 0.1, maoReward: 10000, piReward: 100000, multiplier: 100 },
+            { name: "一等奖", probability: 0.5, maoReward: 2000, piReward: 20000, multiplier: 20 },
+            { name: "二等奖", probability: 2, maoReward: 500, piReward: 5000, multiplier: 5 },
+            { name: "三等奖", probability: 5, maoReward: 200, piReward: 2000, multiplier: 2 },
+            { name: "四等奖", probability: 15, maoReward: 110, piReward: 1100, multiplier: 1.1 },
+            { name: "安慰奖", probability: 27.4, maoReward: 101, piReward: 1010, multiplier: 1.01 }
+        ];
+        
+        const gameCosts = {
+            MAO: 100,
+            PI: 1000
+        };
+        
+        let currentToken = 'MAO';
+        let totalGames = 0;
+        let totalWins = 0;
+        let totalProfit = 0;
+        let isSpinning = false;
+        let userAddress = null;
+        let userLevel = 0;
+        let gameCount = 0;
+        
+        // 钱包连接
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    userAddress = accounts[0];
+                    updateWalletInfo();
+                    enableGame();
+                } else {
+                    alert('请安装 MetaMask 钱包');
+                }
+            } catch (error) {
+                console.error('连接钱包失败:', error);
+                alert('连接钱包失败，请重试');
+            }
+        }
+        
+        function connectTPWallet() {
+            alert('TP钱包连接功能开发中...');
+        }
+        
+        function updateWalletInfo() {
+            const walletInfo = document.getElementById('walletInfo');
+            if (userAddress) {
+                walletInfo.innerHTML = `已连接: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+                document.getElementById('userLevel').style.display = 'block';
+            } else {
+                walletInfo.innerHTML = '请先连接钱包开始游戏';
+            }
+        }
+        
+        function enableGame() {
+            const playBtn = document.getElementById('playBtn');
+            playBtn.disabled = false;
+            playBtn.textContent = '🎯 开始游戏';
+        }
+        
+        function selectToken(token) {
+            currentToken = token;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.token-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 更新显示信息
+            document.getElementById('currentToken').textContent = token;
+            document.getElementById('gameCost').textContent = `${gameCosts[token]} ${token}`;
+        }
+        
+        function playGame() {
+            if (!userAddress) {
+                alert('请先连接钱包');
+                return;
+            }
+            
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            const playBtn = document.getElementById('playBtn');
+            playBtn.disabled = true;
+            playBtn.textContent = '🎰 转盘中...';
+            
+            // 隐藏之前的奖励显示
+            document.getElementById('rewardDisplay').style.display = 'none';
+            
+            // 开始转盘动画
+            const wheel = document.getElementById('wheel');
+            wheel.classList.add('spinning');
+            
+            // 模拟游戏结果
+            setTimeout(() => {
+                const result = simulateGame();
+                
+                // 停止转盘动画
+                wheel.classList.remove('spinning');
+                
+                // 显示结果
+                showResult(result);
+                
+                // 更新统计
+                updateStats(result);
+                
+                // 添加到历史记录
+                addToHistory(result);
+                
+                // 更新用户等级
+                updateUserLevel();
+                
+                // 重置按钮
+                isSpinning = false;
+                playBtn.disabled = false;
+                playBtn.textContent = '🎯 开始游戏';
+            }, 3000);
+        }
+        
+        function simulateGame() {
+            const gameCost = gameCosts[currentToken];
+            const random = Math.random() * 100;
+            let cumulativeProb = 0;
+            
+            // 50%中奖率
+            if (random < 50) {
+                for (let level of rewardLevels) {
+                    cumulativeProb += level.probability;
+                    if (random < cumulativeProb) {
+                        const reward = currentToken === 'MAO' ? level.maoReward : level.piReward;
+                        const profit = reward - gameCost;
+                        return {
+                            isWin: true,
+                            level: level.name,
+                            reward: reward,
+                            profit: profit,
+                            multiplier: level.multiplier
+                        };
+                    }
+                }
+            }
+            
+            return {
+                isWin: false,
+                level: "未中奖",
+                reward: 0,
+                profit: -gameCost,
+                multiplier: 0
+            };
+        }
+        
+        function showResult(result) {
+            const rewardDisplay = document.getElementById('rewardDisplay');
+            const rewardAmount = document.getElementById('rewardAmount');
+            const rewardLevel = document.getElementById('rewardLevel');
+            
+            if (result.isWin) {
+                rewardAmount.textContent = `+${result.reward} ${currentToken}`;
+                rewardLevel.textContent = `🎉 ${result.level} (${result.multiplier}倍)`;
+                rewardAmount.style.color = '#27ae60';
+                
+                // 中奖特效
+                createConfetti();
+                playWinSound();
+            } else {
+                rewardAmount.textContent = `-${gameCosts[currentToken]} ${currentToken}`;
+                rewardLevel.textContent = `❌ ${result.level}`;
+                rewardAmount.style.color = '#e74c3c';
+            }
+            
+            rewardDisplay.style.display = 'block';
+        }
+        
+        function createConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                confetti.style.animationDelay = Math.random() * 3 + 's';
+                document.body.appendChild(confetti);
+                
+                setTimeout(() => {
+                    confetti.remove();
+                }, 3000);
+            }
+        }
+        
+        function playWinSound() {
+            // 这里可以添加音效
+            console.log('🎵 播放中奖音效');
+        }
+        
+        function updateStats(result) {
+            totalGames++;
+            gameCount++;
+            if (result.isWin) {
+                totalWins++;
+                totalProfit += result.profit;
+            } else {
+                totalProfit += result.profit;
+            }
+            
+            document.getElementById('totalGames').textContent = totalGames;
+            document.getElementById('totalWins').textContent = totalWins;
+            document.getElementById('winRate').textContent = totalGames > 0 ? `${((totalWins / totalGames) * 100).toFixed(1)}%` : '0%';
+            document.getElementById('totalProfit').textContent = totalProfit;
+        }
+        
+        function updateUserLevel() {
+            let level = 0;
+            let levelName = '青铜';
+            let bonusRate = 0;
+            
+            if (gameCount >= 5000) {
+                level = 4;
+                levelName = '钻石';
+                bonusRate = 20;
+            } else if (gameCount >= 1000) {
+                level = 3;
+                levelName = '铂金';
+                bonusRate = 15;
+            } else if (gameCount >= 500) {
+                level = 2;
+                levelName = '黄金';
+                bonusRate = 10;
+            } else if (gameCount >= 100) {
+                level = 1;
+                levelName = '白银';
+                bonusRate = 5;
+            }
+            
+            const levelBadge = document.getElementById('levelBadge');
+            levelBadge.className = `level-badge level-${levelName.toLowerCase()}`;
+            levelBadge.textContent = levelName;
+            
+            document.getElementById('gameCount').textContent = gameCount;
+            document.getElementById('bonusRate').textContent = bonusRate + '%';
+        }
+        
+        function addToHistory(result) {
+            const historyContainer = document.getElementById('gameHistory');
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            
+            const profitClass = result.profit >= 0 ? 'profit' : 'loss';
+            const profitText = result.profit >= 0 ? `+${result.profit}` : result.profit;
+            
+            historyItem.innerHTML = `
+                <div>
+                    <strong>${currentToken}游戏</strong> - ${new Date().toLocaleTimeString()}
+                </div>
+                <div>
+                    ${result.isWin ? 
+                        `<span class="profit">🎉 ${result.level} - ${result.reward} ${currentToken}</span>` : 
+                        `<span class="loss">❌ ${result.level}</span>`
+                    }
+                </div>
+                <div class="${profitClass}">
+                    ${profitText} ${currentToken}
+                </div>
+            `;
+            
+            historyContainer.insertBefore(historyItem, historyContainer.firstChild);
+            
+            // 限制历史记录数量
+            if (historyContainer.children.length > 10) {
+                historyContainer.removeChild(historyContainer.lastChild);
+            }
+        }
+        
+        // 社交功能
+        function shareGame() {
+            alert('分享功能开发中...');
+        }
+        
+        function inviteFriend() {
+            alert('邀请码: MAO' + Math.random().toString(36).substr(2, 6).toUpperCase());
+        }
+        
+        function showReferral() {
+            alert('邀请记录功能开发中...');
+        }
+        
+        function showLeaderboard() {
+            alert('排行榜功能开发中...');
+        }
+        
+        function showAchievements() {
+            alert('成就系统功能开发中...');
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎮 MAO游戏界面已加载');
+            console.log('🎯 全中奖盈利系统已准备就绪');
+        });
+    </script>
+</body>
+</html> 

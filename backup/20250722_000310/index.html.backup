@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 MAO游戏 - 紧急维护通知</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: white;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .notice-container {
+            max-width: 600px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            border: 2px solid #ef4444;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .alert-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin: 20px 0;
+            color: #fef2f2;
+        }
+        
+        .status {
+            background: #7f1d1d;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .warning {
+            background: #78350f;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .info {
+            background: #1e3a8a;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .contact {
+            background: #065f46;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #10b981;
+        }
+        
+        .timestamp {
+            font-size: 0.9rem;
+            color: #d1d5db;
+            margin-top: 30px;
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+        
+        ul {
+            text-align: left;
+            margin: 15px 0;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="notice-container">
+        <div class="alert-icon">🚨</div>
+        <h1>紧急维护通知</h1>
+        
+        <div class="status">
+            <h3>🔴 系统状态：紧急维护中</h3>
+            <p><strong class="blink">所有游戏功能已暂停</strong></p>
+        </div>
+        
+        <div class="warning">
+            <h3>⚠️ 重要安全警告</h3>
+            <p>我们发现了潜在的安全问题，为保护所有用户的资金安全：</p>
+            <ul>
+                <li>🚫 <strong>立即停止所有游戏活动</strong></li>
+                <li>🚫 <strong>请勿向任何地址转账</strong></li>
+                <li>🚫 <strong>请勿点击可疑链接</strong></li>
+                <li>🚫 <strong>请勿分享私钥或助记词</strong></li>
+            </ul>
+        </div>
+        
+        <div class="info">
+            <h3>🔧 我们正在做什么</h3>
+            <p>技术团队正在：</p>
+            <ul>
+                <li>🔍 全面排查安全隐患</li>
+                <li>🛡️ 升级安全防护系统</li>
+                <li>🔐 部署多重签名保护</li>
+                <li>📊 实施实时监控机制</li>
+                <li>✅ 确保用户资金安全</li>
+            </ul>
+        </div>
+        
+        <div class="info">
+            <h3>⏰ 预计恢复时间</h3>
+            <p><strong>24-48小时内完成安全升级</strong></p>
+            <p>我们会在第一时间发布更新通知</p>
+        </div>
+        
+        <div class="contact">
+            <h3>📞 紧急联系</h3>
+            <p>如有紧急问题，请通过以下方式联系我们：</p>
+            <ul>
+                <li>📧 官方邮箱：security@maogame.com</li>
+                <li>💬 官方群组：MAO安全通知群</li>
+                <li>🌐 官方网站：持续更新中</li>
+            </ul>
+        </div>
+        
+        <div class="warning">
+            <h3>🎯 下一步计划</h3>
+            <p>维护完成后，我们将：</p>
+            <ul>
+                <li>✅ 发布新的超级安全版本</li>
+                <li>✅ 提供用户资金迁移服务</li>
+                <li>✅ 公开透明的安全审计报告</li>
+                <li>✅ 建立永久安全监控系统</li>
+            </ul>
+        </div>
+        
+        <div class="timestamp">
+            <p>通知发布时间：<span id="currentTime"></span></p>
+            <p>最后更新：<span id="updateTime"></span></p>
+        </div>
+    </div>
+    
+    <script>
+        // 显示当前时间
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-CN');
+            document.getElementById('currentTime').textContent = timeString;
+            document.getElementById('updateTime').textContent = timeString;
+        }
+        
+        updateTime();
+        
+        // 每分钟更新一次时间
+        setInterval(updateTime, 60000);
+        
+        // 防止用户尝试游戏操作
+        document.addEventListener('DOMContentLoaded', function() {
+            // 禁用可能的游戏功能
+            if (window.ethereum) {
+                console.warn('🚨 游戏已暂停，请等待安全升级完成');
+            }
+        });
+        
+        // 显示安全提示
+        setTimeout(() => {
+            alert('🚨 重要安全提醒：\n\n游戏系统正在进行安全升级\n请勿进行任何代币交易\n等待官方进一步通知\n\n感谢您的理解与配合！');
+        }, 2000);
+    </script>
+</body>
+</html> 

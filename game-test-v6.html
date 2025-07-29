@@ -1,0 +1,2317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 MAO Intelligent Wheel - V6 测试版</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            min-height: 100vh; 
+            font-family: Inter, sans-serif; 
+        }
+        .glass { 
+            background: rgba(255,255,255,0.15); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
+        .wheel { 
+            width: 300px; 
+            height: 300px; 
+            border-radius: 50%; 
+            background: conic-gradient(from 0deg, #ef4444 0deg 144deg, #10b981 144deg 360deg); 
+            transition: transform 4s ease; 
+            position: relative; 
+        }
+        .spinning { animation: spin 4s ease; }
+        @keyframes spin { 
+            from { transform: rotate(0deg); } 
+            to { transform: rotate(1800deg); } 
+        }
+        .level-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .level-bronze { background: #cd7f32; color: white; }
+        .level-silver { background: #c0c0c0; color: black; }
+        .level-gold { background: #ffd700; color: black; }
+        .level-platinum { background: #e5e4e2; color: black; }
+        .level-diamond { background: #b9f2ff; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">🎰 MAO Intelligent Wheel</h1>
+            <p class="text-xl text-white/80">V6 智能奖励系统测试版</p>
+        </div>
+
+        <!-- 钱包连接 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-semibold text-white">🔗 钱包连接</h3>
+                    <p class="text-white/70" id="walletStatus">未连接</p>
+                </div>
+                <button id="connectBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                    连接钱包
+                </button>
+            </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="glass rounded-2xl p-6 mb-6" id="userInfo" style="display: none;">
+            <h3 class="text-xl font-semibold text-white mb-4">👤 用户信息</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="userLevel">青铜</div>
+                    <div class="text-sm text-white/70">用户等级</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="totalGames">0</div>
+                    <div class="text-sm text-white/70">总游戏次数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="bonusRate">0%</div>
+                    <div class="text-sm text-white/70">奖励加成</div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="consecutiveDays">0</div>
+                    <div class="text-sm text-white/70">连续游戏天数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="dailyGames">0</div>
+                    <div class="text-sm text-white/70">今日游戏次数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🎮 游戏区域</h3>
+            
+            <!-- 转盘 -->
+            <div class="flex justify-center mb-6">
+                <div class="wheel" id="wheel"></div>
+            </div>
+            
+            <!-- 代币选择 -->
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="maoBtn" class="token-btn active bg-yellow-500 text-black px-6 py-3 rounded-lg font-bold">
+                    🪙 MAO 游戏 (100 MAO)
+                </button>
+                <button id="piBtn" class="token-btn bg-purple-500 text-white px-6 py-3 rounded-lg font-bold">
+                    💎 PI 游戏 (500 PI)
+                </button>
+            </div>
+            
+            <!-- 游戏按钮 -->
+            <div class="text-center">
+                <button id="playBtn" class="game-btn bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl text-xl font-bold">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏统计 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📊 游戏统计</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-blue-400" id="totalGamesStat">0</div>
+                    <div class="text-sm">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-green-400" id="winRate">0%</div>
+                    <div class="text-sm">胜率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-yellow-400" id="totalReward">0</div>
+                    <div class="text-sm">总奖励</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-purple-400" id="dynamicWinRate">40%</div>
+                    <div class="text-sm">动态胜率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 奖励等级 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🏆 奖励等级</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="rewardLevels">
+                <!-- 动态生成奖励等级 -->
+            </div>
+        </div>
+
+        <!-- 游戏历史 -->
+        <div class="glass rounded-2xl p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📜 游戏历史</h3>
+            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-white/50">暂无游戏记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div id="resultIcon" class="text-6xl text-center mb-4">🎉</div>
+            <h3 id="resultTitle" class="text-2xl font-bold text-center mb-2">恭喜获胜！</h3>
+            <p id="resultMessage" class="text-center mb-4">你获得了奖励</p>
+            <div id="resultReward" class="text-3xl font-bold text-yellow-500 text-center mb-6">0 MAO</div>
+            <div class="text-center space-y-2 mb-6">
+                <div id="userBonus" class="text-sm text-green-600">用户加成: +0%</div>
+                <div id="dailyBonus" class="text-sm text-blue-600">每日奖励: +0</div>
+            </div>
+            <button id="closeModal" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg">
+                继续游戏
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class GameManagerV6 {
+            constructor() {
+                this.contract = null;
+                this.signer = null;
+                this.selectedToken = 'MAO';
+                this.isSpinning = false;
+                
+                this.addresses = {
+                    MAO_TOKEN: "0x22f49BCb3DAd370a9268bA3Fca33cB037ca3d022",
+                    PI_TOKEN: "0xFd4680e25E05b3435C7F698668d1ce80D2a9F444",
+                    GAME_CONTRACT: "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913"
+                };
+
+                this.tokenABI = [
+                    "function balanceOf(address owner) external view returns (uint256)",
+                    "function approve(address spender, uint256 amount) external returns (bool)",
+                    "function allowance(address owner, address spender) external view returns (uint256)"
+                ];
+                
+                this.gameABI = [
+                    "function playMAOGame() external",
+                    "function playPIGame() external",
+                    "function getUserLevel(address player) external view returns (tuple(uint256 totalGames, uint256 level, uint256 bonusRate, uint256 lastGameTime, uint256 consecutiveDays))",
+                    "function getGameStats(uint8 tokenType) external view returns (tuple(uint256 totalGames, uint256 totalWins, uint256 totalBets, uint256 totalRewards, uint256 totalBurned, uint256 totalMarketing, uint256 totalProfit, uint256 totalDevelopment))",
+                    "function getRewardLevels() external view returns (tuple(uint256 probability, uint256 maoReward, uint256 piReward, string name)[])",
+                    "function getPlayerHistory(address player) external view returns (tuple(address player, uint8 tokenType, uint256 betAmount, uint256 rewardAmount, uint8 rewardLevel, uint256 timestamp, bool isWin, uint256 burnedAmount, uint256 marketingAmount, uint256 rewardPoolAmount, uint256 developmentAmount, uint256 userBonus, uint256 dailyBonus)[])"
+                ];
+
+                this.init();
+            }
+
+            async init() {
+                this.bindEvents();
+                await this.loadRewardLevels();
+            }
+
+            bindEvents() {
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
+                document.getElementById('maoBtn').addEventListener('click', () => this.selectToken('MAO'));
+                document.getElementById('piBtn').addEventListener('click', () => this.selectToken('PI'));
+                document.getElementById('playBtn').addEventListener('click', () => this.playGame());
+                document.getElementById('closeModal').addEventListener('click', () => this.closeModal());
+            }
+
+            async connectWallet() {
+                try {
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('请安装MetaMask钱包！');
+                        return;
+                    }
+
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = provider.getSigner();
+                    this.contract = new ethers.Contract(this.addresses.GAME_CONTRACT, this.gameABI, this.signer);
+
+                    document.getElementById('walletStatus').textContent = `已连接: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    document.getElementById('userInfo').style.display = 'block';
+
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                } catch (error) {
+                    console.error('连接失败:', error);
+                    alert('钱包连接失败！');
+                }
+            }
+
+            selectToken(token) {
+                this.selectedToken = token;
+                document.getElementById('maoBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                document.getElementById('piBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                
+                if (token === 'MAO') {
+                    document.getElementById('maoBtn').className += ' active bg-yellow-500 text-black';
+                    document.getElementById('piBtn').className += ' bg-purple-500 text-white';
+                } else {
+                    document.getElementById('piBtn').className += ' active bg-purple-500 text-white';
+                    document.getElementById('maoBtn').className += ' bg-yellow-500 text-black';
+                }
+            }
+
+            async playGame() {
+                if (!this.contract || this.isSpinning) return;
+
+                try {
+                    this.isSpinning = true;
+                    document.getElementById('playBtn').disabled = true;
+                    document.getElementById('wheel').classList.add('spinning');
+
+                    // 调用游戏合约
+                    const tx = this.selectedToken === 'MAO' 
+                        ? await this.contract.playMAOGame()
+                        : await this.contract.playPIGame();
+
+                    await tx.wait();
+                    
+                    // 显示结果
+                    this.showResult();
+                    
+                    // 重新加载数据
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                    
+                } catch (error) {
+                    console.error('游戏失败:', error);
+                    alert('游戏失败: ' + error.message);
+                } finally {
+                    this.isSpinning = false;
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('wheel').classList.remove('spinning');
+                }
+            }
+
+            async loadUserInfo() {
+                try {
+                    const userAddress = await this.signer.getAddress();
+                    const userLevel = await this.contract.getUserLevel(userAddress);
+                    
+                    const levelNames = ['青铜', '白银', '黄金', '铂金', '钻石'];
+                    const levelClasses = ['level-bronze', 'level-silver', 'level-gold', 'level-platinum', 'level-diamond'];
+                    
+                    document.getElementById('userLevel').textContent = levelNames[userLevel.level];
+                    document.getElementById('userLevel').className = `text-2xl font-bold text-white ${levelClasses[userLevel.level]}`;
+                    document.getElementById('totalGames').textContent = userLevel.totalGames.toString();
+                    document.getElementById('bonusRate').textContent = userLevel.bonusRate + '%';
+                    document.getElementById('consecutiveDays').textContent = userLevel.consecutiveDays.toString();
+                    
+                } catch (error) {
+                    console.error('加载用户信息失败:', error);
+                }
+            }
+
+            async loadGameStats() {
+                try {
+                    const maoStats = await this.contract.getGameStats(0);
+                    const piStats = await this.contract.getGameStats(1);
+                    
+                    const totalGames = maoStats.totalGames.add(piStats.totalGames);
+                    const totalWins = maoStats.totalWins.add(piStats.totalWins);
+                    const totalReward = maoStats.totalRewards.add(piStats.totalRewards);
+                    
+                    document.getElementById('totalGamesStat').textContent = totalGames.toString();
+                    document.getElementById('winRate').textContent = totalGames.gt(0) ? 
+                        Math.round(totalWins.mul(100).div(totalGames).toNumber()) + '%' : '0%';
+                    document.getElementById('totalReward').textContent = ethers.utils.formatEther(totalReward);
+                    
+                } catch (error) {
+                    console.error('加载游戏统计失败:', error);
+                }
+            }
+
+            async loadRewardLevels() {
+                try {
+                    const rewardLevels = await this.contract.getRewardLevels();
+                    const container = document.getElementById('rewardLevels');
+                    container.innerHTML = '';
+                    
+                    rewardLevels.forEach((level, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-white/10 rounded-lg p-4 text-center';
+                        div.innerHTML = `
+                            <div class="text-lg font-bold text-white">${level.name}</div>
+                            <div class="text-sm text-white/70">概率: ${level.probability/10}%</div>
+                            <div class="text-sm text-yellow-400">MAO: ${ethers.utils.formatEther(level.maoReward)}</div>
+                            <div class="text-sm text-purple-400">PI: ${ethers.utils.formatEther(level.piReward)}</div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } catch (error) {
+                    console.error('加载奖励等级失败:', error);
+                }
+            }
+
+            showResult() {
+                // 模拟结果显示
+                const isWin = Math.random() < 0.4; // 40%胜率
+                const modal = document.getElementById('resultModal');
+                
+                if (isWin) {
+                    document.getElementById('resultIcon').textContent = '🎉';
+                    document.getElementById('resultTitle').textContent = '恭喜获胜！';
+                    document.getElementById('resultMessage').textContent = '你获得了奖励';
+                    document.getElementById('resultReward').textContent = '100 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +5%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +20 MAO';
+                } else {
+                    document.getElementById('resultIcon').textContent = '😔';
+                    document.getElementById('resultTitle').textContent = '很遗憾';
+                    document.getElementById('resultMessage').textContent = '下次再接再厉';
+                    document.getElementById('resultReward').textContent = '0 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +0%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +0';
+                }
+                
+                modal.classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('resultModal').classList.add('hidden');
+            }
+        }
+
+        // 初始化游戏管理器
+        const gameManager = new GameManagerV6();
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 MAO Intelligent Wheel - V6 测试版</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            min-height: 100vh; 
+            font-family: Inter, sans-serif; 
+        }
+        .glass { 
+            background: rgba(255,255,255,0.15); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
+        .wheel { 
+            width: 300px; 
+            height: 300px; 
+            border-radius: 50%; 
+            background: conic-gradient(from 0deg, #ef4444 0deg 144deg, #10b981 144deg 360deg); 
+            transition: transform 4s ease; 
+            position: relative; 
+        }
+        .spinning { animation: spin 4s ease; }
+        @keyframes spin { 
+            from { transform: rotate(0deg); } 
+            to { transform: rotate(1800deg); } 
+        }
+        .level-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .level-bronze { background: #cd7f32; color: white; }
+        .level-silver { background: #c0c0c0; color: black; }
+        .level-gold { background: #ffd700; color: black; }
+        .level-platinum { background: #e5e4e2; color: black; }
+        .level-diamond { background: #b9f2ff; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">🎰 MAO Intelligent Wheel</h1>
+            <p class="text-xl text-white/80">V6 智能奖励系统测试版</p>
+        </div>
+
+        <!-- 钱包连接 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-semibold text-white">🔗 钱包连接</h3>
+                    <p class="text-white/70" id="walletStatus">未连接</p>
+                </div>
+                <button id="connectBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                    连接钱包
+                </button>
+            </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="glass rounded-2xl p-6 mb-6" id="userInfo" style="display: none;">
+            <h3 class="text-xl font-semibold text-white mb-4">👤 用户信息</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="userLevel">青铜</div>
+                    <div class="text-sm text-white/70">用户等级</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="totalGames">0</div>
+                    <div class="text-sm text-white/70">总游戏次数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="bonusRate">0%</div>
+                    <div class="text-sm text-white/70">奖励加成</div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="consecutiveDays">0</div>
+                    <div class="text-sm text-white/70">连续游戏天数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="dailyGames">0</div>
+                    <div class="text-sm text-white/70">今日游戏次数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🎮 游戏区域</h3>
+            
+            <!-- 转盘 -->
+            <div class="flex justify-center mb-6">
+                <div class="wheel" id="wheel"></div>
+            </div>
+            
+            <!-- 代币选择 -->
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="maoBtn" class="token-btn active bg-yellow-500 text-black px-6 py-3 rounded-lg font-bold">
+                    🪙 MAO 游戏 (100 MAO)
+                </button>
+                <button id="piBtn" class="token-btn bg-purple-500 text-white px-6 py-3 rounded-lg font-bold">
+                    💎 PI 游戏 (500 PI)
+                </button>
+            </div>
+            
+            <!-- 游戏按钮 -->
+            <div class="text-center">
+                <button id="playBtn" class="game-btn bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl text-xl font-bold">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏统计 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📊 游戏统计</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-blue-400" id="totalGamesStat">0</div>
+                    <div class="text-sm">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-green-400" id="winRate">0%</div>
+                    <div class="text-sm">胜率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-yellow-400" id="totalReward">0</div>
+                    <div class="text-sm">总奖励</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-purple-400" id="dynamicWinRate">40%</div>
+                    <div class="text-sm">动态胜率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 奖励等级 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🏆 奖励等级</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="rewardLevels">
+                <!-- 动态生成奖励等级 -->
+            </div>
+        </div>
+
+        <!-- 游戏历史 -->
+        <div class="glass rounded-2xl p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📜 游戏历史</h3>
+            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-white/50">暂无游戏记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div id="resultIcon" class="text-6xl text-center mb-4">🎉</div>
+            <h3 id="resultTitle" class="text-2xl font-bold text-center mb-2">恭喜获胜！</h3>
+            <p id="resultMessage" class="text-center mb-4">你获得了奖励</p>
+            <div id="resultReward" class="text-3xl font-bold text-yellow-500 text-center mb-6">0 MAO</div>
+            <div class="text-center space-y-2 mb-6">
+                <div id="userBonus" class="text-sm text-green-600">用户加成: +0%</div>
+                <div id="dailyBonus" class="text-sm text-blue-600">每日奖励: +0</div>
+            </div>
+            <button id="closeModal" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg">
+                继续游戏
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class GameManagerV6 {
+            constructor() {
+                this.contract = null;
+                this.signer = null;
+                this.selectedToken = 'MAO';
+                this.isSpinning = false;
+                
+                this.addresses = {
+                    MAO_TOKEN: "0x22f49BCb3DAd370a9268bA3Fca33cB037ca3d022",
+                    PI_TOKEN: "0xFd4680e25E05b3435C7F698668d1ce80D2a9F444",
+                    GAME_CONTRACT: "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913"
+                };
+
+                this.tokenABI = [
+                    "function balanceOf(address owner) external view returns (uint256)",
+                    "function approve(address spender, uint256 amount) external returns (bool)",
+                    "function allowance(address owner, address spender) external view returns (uint256)"
+                ];
+                
+                this.gameABI = [
+                    "function playMAOGame() external",
+                    "function playPIGame() external",
+                    "function getUserLevel(address player) external view returns (tuple(uint256 totalGames, uint256 level, uint256 bonusRate, uint256 lastGameTime, uint256 consecutiveDays))",
+                    "function getGameStats(uint8 tokenType) external view returns (tuple(uint256 totalGames, uint256 totalWins, uint256 totalBets, uint256 totalRewards, uint256 totalBurned, uint256 totalMarketing, uint256 totalProfit, uint256 totalDevelopment))",
+                    "function getRewardLevels() external view returns (tuple(uint256 probability, uint256 maoReward, uint256 piReward, string name)[])",
+                    "function getPlayerHistory(address player) external view returns (tuple(address player, uint8 tokenType, uint256 betAmount, uint256 rewardAmount, uint8 rewardLevel, uint256 timestamp, bool isWin, uint256 burnedAmount, uint256 marketingAmount, uint256 rewardPoolAmount, uint256 developmentAmount, uint256 userBonus, uint256 dailyBonus)[])"
+                ];
+
+                this.init();
+            }
+
+            async init() {
+                this.bindEvents();
+                await this.loadRewardLevels();
+            }
+
+            bindEvents() {
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
+                document.getElementById('maoBtn').addEventListener('click', () => this.selectToken('MAO'));
+                document.getElementById('piBtn').addEventListener('click', () => this.selectToken('PI'));
+                document.getElementById('playBtn').addEventListener('click', () => this.playGame());
+                document.getElementById('closeModal').addEventListener('click', () => this.closeModal());
+            }
+
+            async connectWallet() {
+                try {
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('请安装MetaMask钱包！');
+                        return;
+                    }
+
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = provider.getSigner();
+                    this.contract = new ethers.Contract(this.addresses.GAME_CONTRACT, this.gameABI, this.signer);
+
+                    document.getElementById('walletStatus').textContent = `已连接: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    document.getElementById('userInfo').style.display = 'block';
+
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                } catch (error) {
+                    console.error('连接失败:', error);
+                    alert('钱包连接失败！');
+                }
+            }
+
+            selectToken(token) {
+                this.selectedToken = token;
+                document.getElementById('maoBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                document.getElementById('piBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                
+                if (token === 'MAO') {
+                    document.getElementById('maoBtn').className += ' active bg-yellow-500 text-black';
+                    document.getElementById('piBtn').className += ' bg-purple-500 text-white';
+                } else {
+                    document.getElementById('piBtn').className += ' active bg-purple-500 text-white';
+                    document.getElementById('maoBtn').className += ' bg-yellow-500 text-black';
+                }
+            }
+
+            async playGame() {
+                if (!this.contract || this.isSpinning) return;
+
+                try {
+                    this.isSpinning = true;
+                    document.getElementById('playBtn').disabled = true;
+                    document.getElementById('wheel').classList.add('spinning');
+
+                    // 调用游戏合约
+                    const tx = this.selectedToken === 'MAO' 
+                        ? await this.contract.playMAOGame()
+                        : await this.contract.playPIGame();
+
+                    await tx.wait();
+                    
+                    // 显示结果
+                    this.showResult();
+                    
+                    // 重新加载数据
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                    
+                } catch (error) {
+                    console.error('游戏失败:', error);
+                    alert('游戏失败: ' + error.message);
+                } finally {
+                    this.isSpinning = false;
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('wheel').classList.remove('spinning');
+                }
+            }
+
+            async loadUserInfo() {
+                try {
+                    const userAddress = await this.signer.getAddress();
+                    const userLevel = await this.contract.getUserLevel(userAddress);
+                    
+                    const levelNames = ['青铜', '白银', '黄金', '铂金', '钻石'];
+                    const levelClasses = ['level-bronze', 'level-silver', 'level-gold', 'level-platinum', 'level-diamond'];
+                    
+                    document.getElementById('userLevel').textContent = levelNames[userLevel.level];
+                    document.getElementById('userLevel').className = `text-2xl font-bold text-white ${levelClasses[userLevel.level]}`;
+                    document.getElementById('totalGames').textContent = userLevel.totalGames.toString();
+                    document.getElementById('bonusRate').textContent = userLevel.bonusRate + '%';
+                    document.getElementById('consecutiveDays').textContent = userLevel.consecutiveDays.toString();
+                    
+                } catch (error) {
+                    console.error('加载用户信息失败:', error);
+                }
+            }
+
+            async loadGameStats() {
+                try {
+                    const maoStats = await this.contract.getGameStats(0);
+                    const piStats = await this.contract.getGameStats(1);
+                    
+                    const totalGames = maoStats.totalGames.add(piStats.totalGames);
+                    const totalWins = maoStats.totalWins.add(piStats.totalWins);
+                    const totalReward = maoStats.totalRewards.add(piStats.totalRewards);
+                    
+                    document.getElementById('totalGamesStat').textContent = totalGames.toString();
+                    document.getElementById('winRate').textContent = totalGames.gt(0) ? 
+                        Math.round(totalWins.mul(100).div(totalGames).toNumber()) + '%' : '0%';
+                    document.getElementById('totalReward').textContent = ethers.utils.formatEther(totalReward);
+                    
+                } catch (error) {
+                    console.error('加载游戏统计失败:', error);
+                }
+            }
+
+            async loadRewardLevels() {
+                try {
+                    const rewardLevels = await this.contract.getRewardLevels();
+                    const container = document.getElementById('rewardLevels');
+                    container.innerHTML = '';
+                    
+                    rewardLevels.forEach((level, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-white/10 rounded-lg p-4 text-center';
+                        div.innerHTML = `
+                            <div class="text-lg font-bold text-white">${level.name}</div>
+                            <div class="text-sm text-white/70">概率: ${level.probability/10}%</div>
+                            <div class="text-sm text-yellow-400">MAO: ${ethers.utils.formatEther(level.maoReward)}</div>
+                            <div class="text-sm text-purple-400">PI: ${ethers.utils.formatEther(level.piReward)}</div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } catch (error) {
+                    console.error('加载奖励等级失败:', error);
+                }
+            }
+
+            showResult() {
+                // 模拟结果显示
+                const isWin = Math.random() < 0.4; // 40%胜率
+                const modal = document.getElementById('resultModal');
+                
+                if (isWin) {
+                    document.getElementById('resultIcon').textContent = '🎉';
+                    document.getElementById('resultTitle').textContent = '恭喜获胜！';
+                    document.getElementById('resultMessage').textContent = '你获得了奖励';
+                    document.getElementById('resultReward').textContent = '100 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +5%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +20 MAO';
+                } else {
+                    document.getElementById('resultIcon').textContent = '😔';
+                    document.getElementById('resultTitle').textContent = '很遗憾';
+                    document.getElementById('resultMessage').textContent = '下次再接再厉';
+                    document.getElementById('resultReward').textContent = '0 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +0%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +0';
+                }
+                
+                modal.classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('resultModal').classList.add('hidden');
+            }
+        }
+
+        // 初始化游戏管理器
+        const gameManager = new GameManagerV6();
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 MAO Intelligent Wheel - V6 测试版</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            min-height: 100vh; 
+            font-family: Inter, sans-serif; 
+        }
+        .glass { 
+            background: rgba(255,255,255,0.15); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
+        .wheel { 
+            width: 300px; 
+            height: 300px; 
+            border-radius: 50%; 
+            background: conic-gradient(from 0deg, #ef4444 0deg 144deg, #10b981 144deg 360deg); 
+            transition: transform 4s ease; 
+            position: relative; 
+        }
+        .spinning { animation: spin 4s ease; }
+        @keyframes spin { 
+            from { transform: rotate(0deg); } 
+            to { transform: rotate(1800deg); } 
+        }
+        .level-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .level-bronze { background: #cd7f32; color: white; }
+        .level-silver { background: #c0c0c0; color: black; }
+        .level-gold { background: #ffd700; color: black; }
+        .level-platinum { background: #e5e4e2; color: black; }
+        .level-diamond { background: #b9f2ff; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">🎰 MAO Intelligent Wheel</h1>
+            <p class="text-xl text-white/80">V6 智能奖励系统测试版</p>
+        </div>
+
+        <!-- 钱包连接 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-semibold text-white">🔗 钱包连接</h3>
+                    <p class="text-white/70" id="walletStatus">未连接</p>
+                </div>
+                <button id="connectBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                    连接钱包
+                </button>
+            </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="glass rounded-2xl p-6 mb-6" id="userInfo" style="display: none;">
+            <h3 class="text-xl font-semibold text-white mb-4">👤 用户信息</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="userLevel">青铜</div>
+                    <div class="text-sm text-white/70">用户等级</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="totalGames">0</div>
+                    <div class="text-sm text-white/70">总游戏次数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="bonusRate">0%</div>
+                    <div class="text-sm text-white/70">奖励加成</div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="consecutiveDays">0</div>
+                    <div class="text-sm text-white/70">连续游戏天数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="dailyGames">0</div>
+                    <div class="text-sm text-white/70">今日游戏次数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🎮 游戏区域</h3>
+            
+            <!-- 转盘 -->
+            <div class="flex justify-center mb-6">
+                <div class="wheel" id="wheel"></div>
+            </div>
+            
+            <!-- 代币选择 -->
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="maoBtn" class="token-btn active bg-yellow-500 text-black px-6 py-3 rounded-lg font-bold">
+                    🪙 MAO 游戏 (100 MAO)
+                </button>
+                <button id="piBtn" class="token-btn bg-purple-500 text-white px-6 py-3 rounded-lg font-bold">
+                    💎 PI 游戏 (500 PI)
+                </button>
+            </div>
+            
+            <!-- 游戏按钮 -->
+            <div class="text-center">
+                <button id="playBtn" class="game-btn bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl text-xl font-bold">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏统计 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📊 游戏统计</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-blue-400" id="totalGamesStat">0</div>
+                    <div class="text-sm">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-green-400" id="winRate">0%</div>
+                    <div class="text-sm">胜率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-yellow-400" id="totalReward">0</div>
+                    <div class="text-sm">总奖励</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-purple-400" id="dynamicWinRate">40%</div>
+                    <div class="text-sm">动态胜率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 奖励等级 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🏆 奖励等级</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="rewardLevels">
+                <!-- 动态生成奖励等级 -->
+            </div>
+        </div>
+
+        <!-- 游戏历史 -->
+        <div class="glass rounded-2xl p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📜 游戏历史</h3>
+            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-white/50">暂无游戏记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div id="resultIcon" class="text-6xl text-center mb-4">🎉</div>
+            <h3 id="resultTitle" class="text-2xl font-bold text-center mb-2">恭喜获胜！</h3>
+            <p id="resultMessage" class="text-center mb-4">你获得了奖励</p>
+            <div id="resultReward" class="text-3xl font-bold text-yellow-500 text-center mb-6">0 MAO</div>
+            <div class="text-center space-y-2 mb-6">
+                <div id="userBonus" class="text-sm text-green-600">用户加成: +0%</div>
+                <div id="dailyBonus" class="text-sm text-blue-600">每日奖励: +0</div>
+            </div>
+            <button id="closeModal" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg">
+                继续游戏
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class GameManagerV6 {
+            constructor() {
+                this.contract = null;
+                this.signer = null;
+                this.selectedToken = 'MAO';
+                this.isSpinning = false;
+                
+                this.addresses = {
+                    MAO_TOKEN: "0x22f49BCb3DAd370a9268bA3Fca33cB037ca3d022",
+                    PI_TOKEN: "0xFd4680e25E05b3435C7F698668d1ce80D2a9F444",
+                    GAME_CONTRACT: "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913"
+                };
+
+                this.tokenABI = [
+                    "function balanceOf(address owner) external view returns (uint256)",
+                    "function approve(address spender, uint256 amount) external returns (bool)",
+                    "function allowance(address owner, address spender) external view returns (uint256)"
+                ];
+                
+                this.gameABI = [
+                    "function playMAOGame() external",
+                    "function playPIGame() external",
+                    "function getUserLevel(address player) external view returns (tuple(uint256 totalGames, uint256 level, uint256 bonusRate, uint256 lastGameTime, uint256 consecutiveDays))",
+                    "function getGameStats(uint8 tokenType) external view returns (tuple(uint256 totalGames, uint256 totalWins, uint256 totalBets, uint256 totalRewards, uint256 totalBurned, uint256 totalMarketing, uint256 totalProfit, uint256 totalDevelopment))",
+                    "function getRewardLevels() external view returns (tuple(uint256 probability, uint256 maoReward, uint256 piReward, string name)[])",
+                    "function getPlayerHistory(address player) external view returns (tuple(address player, uint8 tokenType, uint256 betAmount, uint256 rewardAmount, uint8 rewardLevel, uint256 timestamp, bool isWin, uint256 burnedAmount, uint256 marketingAmount, uint256 rewardPoolAmount, uint256 developmentAmount, uint256 userBonus, uint256 dailyBonus)[])"
+                ];
+
+                this.init();
+            }
+
+            async init() {
+                this.bindEvents();
+                await this.loadRewardLevels();
+            }
+
+            bindEvents() {
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
+                document.getElementById('maoBtn').addEventListener('click', () => this.selectToken('MAO'));
+                document.getElementById('piBtn').addEventListener('click', () => this.selectToken('PI'));
+                document.getElementById('playBtn').addEventListener('click', () => this.playGame());
+                document.getElementById('closeModal').addEventListener('click', () => this.closeModal());
+            }
+
+            async connectWallet() {
+                try {
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('请安装MetaMask钱包！');
+                        return;
+                    }
+
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = provider.getSigner();
+                    this.contract = new ethers.Contract(this.addresses.GAME_CONTRACT, this.gameABI, this.signer);
+
+                    document.getElementById('walletStatus').textContent = `已连接: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    document.getElementById('userInfo').style.display = 'block';
+
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                } catch (error) {
+                    console.error('连接失败:', error);
+                    alert('钱包连接失败！');
+                }
+            }
+
+            selectToken(token) {
+                this.selectedToken = token;
+                document.getElementById('maoBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                document.getElementById('piBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                
+                if (token === 'MAO') {
+                    document.getElementById('maoBtn').className += ' active bg-yellow-500 text-black';
+                    document.getElementById('piBtn').className += ' bg-purple-500 text-white';
+                } else {
+                    document.getElementById('piBtn').className += ' active bg-purple-500 text-white';
+                    document.getElementById('maoBtn').className += ' bg-yellow-500 text-black';
+                }
+            }
+
+            async playGame() {
+                if (!this.contract || this.isSpinning) return;
+
+                try {
+                    this.isSpinning = true;
+                    document.getElementById('playBtn').disabled = true;
+                    document.getElementById('wheel').classList.add('spinning');
+
+                    // 调用游戏合约
+                    const tx = this.selectedToken === 'MAO' 
+                        ? await this.contract.playMAOGame()
+                        : await this.contract.playPIGame();
+
+                    await tx.wait();
+                    
+                    // 显示结果
+                    this.showResult();
+                    
+                    // 重新加载数据
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                    
+                } catch (error) {
+                    console.error('游戏失败:', error);
+                    alert('游戏失败: ' + error.message);
+                } finally {
+                    this.isSpinning = false;
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('wheel').classList.remove('spinning');
+                }
+            }
+
+            async loadUserInfo() {
+                try {
+                    const userAddress = await this.signer.getAddress();
+                    const userLevel = await this.contract.getUserLevel(userAddress);
+                    
+                    const levelNames = ['青铜', '白银', '黄金', '铂金', '钻石'];
+                    const levelClasses = ['level-bronze', 'level-silver', 'level-gold', 'level-platinum', 'level-diamond'];
+                    
+                    document.getElementById('userLevel').textContent = levelNames[userLevel.level];
+                    document.getElementById('userLevel').className = `text-2xl font-bold text-white ${levelClasses[userLevel.level]}`;
+                    document.getElementById('totalGames').textContent = userLevel.totalGames.toString();
+                    document.getElementById('bonusRate').textContent = userLevel.bonusRate + '%';
+                    document.getElementById('consecutiveDays').textContent = userLevel.consecutiveDays.toString();
+                    
+                } catch (error) {
+                    console.error('加载用户信息失败:', error);
+                }
+            }
+
+            async loadGameStats() {
+                try {
+                    const maoStats = await this.contract.getGameStats(0);
+                    const piStats = await this.contract.getGameStats(1);
+                    
+                    const totalGames = maoStats.totalGames.add(piStats.totalGames);
+                    const totalWins = maoStats.totalWins.add(piStats.totalWins);
+                    const totalReward = maoStats.totalRewards.add(piStats.totalRewards);
+                    
+                    document.getElementById('totalGamesStat').textContent = totalGames.toString();
+                    document.getElementById('winRate').textContent = totalGames.gt(0) ? 
+                        Math.round(totalWins.mul(100).div(totalGames).toNumber()) + '%' : '0%';
+                    document.getElementById('totalReward').textContent = ethers.utils.formatEther(totalReward);
+                    
+                } catch (error) {
+                    console.error('加载游戏统计失败:', error);
+                }
+            }
+
+            async loadRewardLevels() {
+                try {
+                    const rewardLevels = await this.contract.getRewardLevels();
+                    const container = document.getElementById('rewardLevels');
+                    container.innerHTML = '';
+                    
+                    rewardLevels.forEach((level, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-white/10 rounded-lg p-4 text-center';
+                        div.innerHTML = `
+                            <div class="text-lg font-bold text-white">${level.name}</div>
+                            <div class="text-sm text-white/70">概率: ${level.probability/10}%</div>
+                            <div class="text-sm text-yellow-400">MAO: ${ethers.utils.formatEther(level.maoReward)}</div>
+                            <div class="text-sm text-purple-400">PI: ${ethers.utils.formatEther(level.piReward)}</div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } catch (error) {
+                    console.error('加载奖励等级失败:', error);
+                }
+            }
+
+            showResult() {
+                // 模拟结果显示
+                const isWin = Math.random() < 0.4; // 40%胜率
+                const modal = document.getElementById('resultModal');
+                
+                if (isWin) {
+                    document.getElementById('resultIcon').textContent = '🎉';
+                    document.getElementById('resultTitle').textContent = '恭喜获胜！';
+                    document.getElementById('resultMessage').textContent = '你获得了奖励';
+                    document.getElementById('resultReward').textContent = '100 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +5%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +20 MAO';
+                } else {
+                    document.getElementById('resultIcon').textContent = '😔';
+                    document.getElementById('resultTitle').textContent = '很遗憾';
+                    document.getElementById('resultMessage').textContent = '下次再接再厉';
+                    document.getElementById('resultReward').textContent = '0 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +0%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +0';
+                }
+                
+                modal.classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('resultModal').classList.add('hidden');
+            }
+        }
+
+        // 初始化游戏管理器
+        const gameManager = new GameManagerV6();
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 MAO Intelligent Wheel - V6 测试版</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            min-height: 100vh; 
+            font-family: Inter, sans-serif; 
+        }
+        .glass { 
+            background: rgba(255,255,255,0.15); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
+        .wheel { 
+            width: 300px; 
+            height: 300px; 
+            border-radius: 50%; 
+            background: conic-gradient(from 0deg, #ef4444 0deg 144deg, #10b981 144deg 360deg); 
+            transition: transform 4s ease; 
+            position: relative; 
+        }
+        .spinning { animation: spin 4s ease; }
+        @keyframes spin { 
+            from { transform: rotate(0deg); } 
+            to { transform: rotate(1800deg); } 
+        }
+        .level-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .level-bronze { background: #cd7f32; color: white; }
+        .level-silver { background: #c0c0c0; color: black; }
+        .level-gold { background: #ffd700; color: black; }
+        .level-platinum { background: #e5e4e2; color: black; }
+        .level-diamond { background: #b9f2ff; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">🎰 MAO Intelligent Wheel</h1>
+            <p class="text-xl text-white/80">V6 智能奖励系统测试版</p>
+        </div>
+
+        <!-- 钱包连接 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-semibold text-white">🔗 钱包连接</h3>
+                    <p class="text-white/70" id="walletStatus">未连接</p>
+                </div>
+                <button id="connectBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                    连接钱包
+                </button>
+            </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="glass rounded-2xl p-6 mb-6" id="userInfo" style="display: none;">
+            <h3 class="text-xl font-semibold text-white mb-4">👤 用户信息</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="userLevel">青铜</div>
+                    <div class="text-sm text-white/70">用户等级</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="totalGames">0</div>
+                    <div class="text-sm text-white/70">总游戏次数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="bonusRate">0%</div>
+                    <div class="text-sm text-white/70">奖励加成</div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="consecutiveDays">0</div>
+                    <div class="text-sm text-white/70">连续游戏天数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="dailyGames">0</div>
+                    <div class="text-sm text-white/70">今日游戏次数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🎮 游戏区域</h3>
+            
+            <!-- 转盘 -->
+            <div class="flex justify-center mb-6">
+                <div class="wheel" id="wheel"></div>
+            </div>
+            
+            <!-- 代币选择 -->
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="maoBtn" class="token-btn active bg-yellow-500 text-black px-6 py-3 rounded-lg font-bold">
+                    🪙 MAO 游戏 (100 MAO)
+                </button>
+                <button id="piBtn" class="token-btn bg-purple-500 text-white px-6 py-3 rounded-lg font-bold">
+                    💎 PI 游戏 (500 PI)
+                </button>
+            </div>
+            
+            <!-- 游戏按钮 -->
+            <div class="text-center">
+                <button id="playBtn" class="game-btn bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl text-xl font-bold">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏统计 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📊 游戏统计</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-blue-400" id="totalGamesStat">0</div>
+                    <div class="text-sm">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-green-400" id="winRate">0%</div>
+                    <div class="text-sm">胜率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-yellow-400" id="totalReward">0</div>
+                    <div class="text-sm">总奖励</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-purple-400" id="dynamicWinRate">40%</div>
+                    <div class="text-sm">动态胜率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 奖励等级 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🏆 奖励等级</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="rewardLevels">
+                <!-- 动态生成奖励等级 -->
+            </div>
+        </div>
+
+        <!-- 游戏历史 -->
+        <div class="glass rounded-2xl p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📜 游戏历史</h3>
+            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-white/50">暂无游戏记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div id="resultIcon" class="text-6xl text-center mb-4">🎉</div>
+            <h3 id="resultTitle" class="text-2xl font-bold text-center mb-2">恭喜获胜！</h3>
+            <p id="resultMessage" class="text-center mb-4">你获得了奖励</p>
+            <div id="resultReward" class="text-3xl font-bold text-yellow-500 text-center mb-6">0 MAO</div>
+            <div class="text-center space-y-2 mb-6">
+                <div id="userBonus" class="text-sm text-green-600">用户加成: +0%</div>
+                <div id="dailyBonus" class="text-sm text-blue-600">每日奖励: +0</div>
+            </div>
+            <button id="closeModal" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg">
+                继续游戏
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class GameManagerV6 {
+            constructor() {
+                this.contract = null;
+                this.signer = null;
+                this.selectedToken = 'MAO';
+                this.isSpinning = false;
+                
+                this.addresses = {
+                    MAO_TOKEN: "0x22f49BCb3DAd370a9268bA3Fca33cB037ca3d022",
+                    PI_TOKEN: "0xFd4680e25E05b3435C7F698668d1ce80D2a9F444",
+                    GAME_CONTRACT: "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913"
+                };
+
+                this.tokenABI = [
+                    "function balanceOf(address owner) external view returns (uint256)",
+                    "function approve(address spender, uint256 amount) external returns (bool)",
+                    "function allowance(address owner, address spender) external view returns (uint256)"
+                ];
+                
+                this.gameABI = [
+                    "function playMAOGame() external",
+                    "function playPIGame() external",
+                    "function getUserLevel(address player) external view returns (tuple(uint256 totalGames, uint256 level, uint256 bonusRate, uint256 lastGameTime, uint256 consecutiveDays))",
+                    "function getGameStats(uint8 tokenType) external view returns (tuple(uint256 totalGames, uint256 totalWins, uint256 totalBets, uint256 totalRewards, uint256 totalBurned, uint256 totalMarketing, uint256 totalProfit, uint256 totalDevelopment))",
+                    "function getRewardLevels() external view returns (tuple(uint256 probability, uint256 maoReward, uint256 piReward, string name)[])",
+                    "function getPlayerHistory(address player) external view returns (tuple(address player, uint8 tokenType, uint256 betAmount, uint256 rewardAmount, uint8 rewardLevel, uint256 timestamp, bool isWin, uint256 burnedAmount, uint256 marketingAmount, uint256 rewardPoolAmount, uint256 developmentAmount, uint256 userBonus, uint256 dailyBonus)[])"
+                ];
+
+                this.init();
+            }
+
+            async init() {
+                this.bindEvents();
+                await this.loadRewardLevels();
+            }
+
+            bindEvents() {
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
+                document.getElementById('maoBtn').addEventListener('click', () => this.selectToken('MAO'));
+                document.getElementById('piBtn').addEventListener('click', () => this.selectToken('PI'));
+                document.getElementById('playBtn').addEventListener('click', () => this.playGame());
+                document.getElementById('closeModal').addEventListener('click', () => this.closeModal());
+            }
+
+            async connectWallet() {
+                try {
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('请安装MetaMask钱包！');
+                        return;
+                    }
+
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = provider.getSigner();
+                    this.contract = new ethers.Contract(this.addresses.GAME_CONTRACT, this.gameABI, this.signer);
+
+                    document.getElementById('walletStatus').textContent = `已连接: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    document.getElementById('userInfo').style.display = 'block';
+
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                } catch (error) {
+                    console.error('连接失败:', error);
+                    alert('钱包连接失败！');
+                }
+            }
+
+            selectToken(token) {
+                this.selectedToken = token;
+                document.getElementById('maoBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                document.getElementById('piBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                
+                if (token === 'MAO') {
+                    document.getElementById('maoBtn').className += ' active bg-yellow-500 text-black';
+                    document.getElementById('piBtn').className += ' bg-purple-500 text-white';
+                } else {
+                    document.getElementById('piBtn').className += ' active bg-purple-500 text-white';
+                    document.getElementById('maoBtn').className += ' bg-yellow-500 text-black';
+                }
+            }
+
+            async playGame() {
+                if (!this.contract || this.isSpinning) return;
+
+                try {
+                    this.isSpinning = true;
+                    document.getElementById('playBtn').disabled = true;
+                    document.getElementById('wheel').classList.add('spinning');
+
+                    // 调用游戏合约
+                    const tx = this.selectedToken === 'MAO' 
+                        ? await this.contract.playMAOGame()
+                        : await this.contract.playPIGame();
+
+                    await tx.wait();
+                    
+                    // 显示结果
+                    this.showResult();
+                    
+                    // 重新加载数据
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                    
+                } catch (error) {
+                    console.error('游戏失败:', error);
+                    alert('游戏失败: ' + error.message);
+                } finally {
+                    this.isSpinning = false;
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('wheel').classList.remove('spinning');
+                }
+            }
+
+            async loadUserInfo() {
+                try {
+                    const userAddress = await this.signer.getAddress();
+                    const userLevel = await this.contract.getUserLevel(userAddress);
+                    
+                    const levelNames = ['青铜', '白银', '黄金', '铂金', '钻石'];
+                    const levelClasses = ['level-bronze', 'level-silver', 'level-gold', 'level-platinum', 'level-diamond'];
+                    
+                    document.getElementById('userLevel').textContent = levelNames[userLevel.level];
+                    document.getElementById('userLevel').className = `text-2xl font-bold text-white ${levelClasses[userLevel.level]}`;
+                    document.getElementById('totalGames').textContent = userLevel.totalGames.toString();
+                    document.getElementById('bonusRate').textContent = userLevel.bonusRate + '%';
+                    document.getElementById('consecutiveDays').textContent = userLevel.consecutiveDays.toString();
+                    
+                } catch (error) {
+                    console.error('加载用户信息失败:', error);
+                }
+            }
+
+            async loadGameStats() {
+                try {
+                    const maoStats = await this.contract.getGameStats(0);
+                    const piStats = await this.contract.getGameStats(1);
+                    
+                    const totalGames = maoStats.totalGames.add(piStats.totalGames);
+                    const totalWins = maoStats.totalWins.add(piStats.totalWins);
+                    const totalReward = maoStats.totalRewards.add(piStats.totalRewards);
+                    
+                    document.getElementById('totalGamesStat').textContent = totalGames.toString();
+                    document.getElementById('winRate').textContent = totalGames.gt(0) ? 
+                        Math.round(totalWins.mul(100).div(totalGames).toNumber()) + '%' : '0%';
+                    document.getElementById('totalReward').textContent = ethers.utils.formatEther(totalReward);
+                    
+                } catch (error) {
+                    console.error('加载游戏统计失败:', error);
+                }
+            }
+
+            async loadRewardLevels() {
+                try {
+                    const rewardLevels = await this.contract.getRewardLevels();
+                    const container = document.getElementById('rewardLevels');
+                    container.innerHTML = '';
+                    
+                    rewardLevels.forEach((level, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-white/10 rounded-lg p-4 text-center';
+                        div.innerHTML = `
+                            <div class="text-lg font-bold text-white">${level.name}</div>
+                            <div class="text-sm text-white/70">概率: ${level.probability/10}%</div>
+                            <div class="text-sm text-yellow-400">MAO: ${ethers.utils.formatEther(level.maoReward)}</div>
+                            <div class="text-sm text-purple-400">PI: ${ethers.utils.formatEther(level.piReward)}</div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } catch (error) {
+                    console.error('加载奖励等级失败:', error);
+                }
+            }
+
+            showResult() {
+                // 模拟结果显示
+                const isWin = Math.random() < 0.4; // 40%胜率
+                const modal = document.getElementById('resultModal');
+                
+                if (isWin) {
+                    document.getElementById('resultIcon').textContent = '🎉';
+                    document.getElementById('resultTitle').textContent = '恭喜获胜！';
+                    document.getElementById('resultMessage').textContent = '你获得了奖励';
+                    document.getElementById('resultReward').textContent = '100 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +5%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +20 MAO';
+                } else {
+                    document.getElementById('resultIcon').textContent = '😔';
+                    document.getElementById('resultTitle').textContent = '很遗憾';
+                    document.getElementById('resultMessage').textContent = '下次再接再厉';
+                    document.getElementById('resultReward').textContent = '0 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +0%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +0';
+                }
+                
+                modal.classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('resultModal').classList.add('hidden');
+            }
+        }
+
+        // 初始化游戏管理器
+        const gameManager = new GameManagerV6();
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 MAO Intelligent Wheel - V6 测试版</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            min-height: 100vh; 
+            font-family: Inter, sans-serif; 
+        }
+        .glass { 
+            background: rgba(255,255,255,0.15); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
+        .wheel { 
+            width: 300px; 
+            height: 300px; 
+            border-radius: 50%; 
+            background: conic-gradient(from 0deg, #ef4444 0deg 144deg, #10b981 144deg 360deg); 
+            transition: transform 4s ease; 
+            position: relative; 
+        }
+        .spinning { animation: spin 4s ease; }
+        @keyframes spin { 
+            from { transform: rotate(0deg); } 
+            to { transform: rotate(1800deg); } 
+        }
+        .level-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .level-bronze { background: #cd7f32; color: white; }
+        .level-silver { background: #c0c0c0; color: black; }
+        .level-gold { background: #ffd700; color: black; }
+        .level-platinum { background: #e5e4e2; color: black; }
+        .level-diamond { background: #b9f2ff; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">🎰 MAO Intelligent Wheel</h1>
+            <p class="text-xl text-white/80">V6 智能奖励系统测试版</p>
+        </div>
+
+        <!-- 钱包连接 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-semibold text-white">🔗 钱包连接</h3>
+                    <p class="text-white/70" id="walletStatus">未连接</p>
+                </div>
+                <button id="connectBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                    连接钱包
+                </button>
+            </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="glass rounded-2xl p-6 mb-6" id="userInfo" style="display: none;">
+            <h3 class="text-xl font-semibold text-white mb-4">👤 用户信息</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="userLevel">青铜</div>
+                    <div class="text-sm text-white/70">用户等级</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="totalGames">0</div>
+                    <div class="text-sm text-white/70">总游戏次数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="bonusRate">0%</div>
+                    <div class="text-sm text-white/70">奖励加成</div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="consecutiveDays">0</div>
+                    <div class="text-sm text-white/70">连续游戏天数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="dailyGames">0</div>
+                    <div class="text-sm text-white/70">今日游戏次数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🎮 游戏区域</h3>
+            
+            <!-- 转盘 -->
+            <div class="flex justify-center mb-6">
+                <div class="wheel" id="wheel"></div>
+            </div>
+            
+            <!-- 代币选择 -->
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="maoBtn" class="token-btn active bg-yellow-500 text-black px-6 py-3 rounded-lg font-bold">
+                    🪙 MAO 游戏 (100 MAO)
+                </button>
+                <button id="piBtn" class="token-btn bg-purple-500 text-white px-6 py-3 rounded-lg font-bold">
+                    💎 PI 游戏 (500 PI)
+                </button>
+            </div>
+            
+            <!-- 游戏按钮 -->
+            <div class="text-center">
+                <button id="playBtn" class="game-btn bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl text-xl font-bold">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏统计 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📊 游戏统计</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-blue-400" id="totalGamesStat">0</div>
+                    <div class="text-sm">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-green-400" id="winRate">0%</div>
+                    <div class="text-sm">胜率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-yellow-400" id="totalReward">0</div>
+                    <div class="text-sm">总奖励</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-purple-400" id="dynamicWinRate">40%</div>
+                    <div class="text-sm">动态胜率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 奖励等级 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🏆 奖励等级</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="rewardLevels">
+                <!-- 动态生成奖励等级 -->
+            </div>
+        </div>
+
+        <!-- 游戏历史 -->
+        <div class="glass rounded-2xl p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📜 游戏历史</h3>
+            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-white/50">暂无游戏记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div id="resultIcon" class="text-6xl text-center mb-4">🎉</div>
+            <h3 id="resultTitle" class="text-2xl font-bold text-center mb-2">恭喜获胜！</h3>
+            <p id="resultMessage" class="text-center mb-4">你获得了奖励</p>
+            <div id="resultReward" class="text-3xl font-bold text-yellow-500 text-center mb-6">0 MAO</div>
+            <div class="text-center space-y-2 mb-6">
+                <div id="userBonus" class="text-sm text-green-600">用户加成: +0%</div>
+                <div id="dailyBonus" class="text-sm text-blue-600">每日奖励: +0</div>
+            </div>
+            <button id="closeModal" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg">
+                继续游戏
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class GameManagerV6 {
+            constructor() {
+                this.contract = null;
+                this.signer = null;
+                this.selectedToken = 'MAO';
+                this.isSpinning = false;
+                
+                this.addresses = {
+                    MAO_TOKEN: "0x22f49BCb3DAd370a9268bA3Fca33cB037ca3d022",
+                    PI_TOKEN: "0xFd4680e25E05b3435C7F698668d1ce80D2a9F444",
+                    GAME_CONTRACT: "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913"
+                };
+
+                this.tokenABI = [
+                    "function balanceOf(address owner) external view returns (uint256)",
+                    "function approve(address spender, uint256 amount) external returns (bool)",
+                    "function allowance(address owner, address spender) external view returns (uint256)"
+                ];
+                
+                this.gameABI = [
+                    "function playMAOGame() external",
+                    "function playPIGame() external",
+                    "function getUserLevel(address player) external view returns (tuple(uint256 totalGames, uint256 level, uint256 bonusRate, uint256 lastGameTime, uint256 consecutiveDays))",
+                    "function getGameStats(uint8 tokenType) external view returns (tuple(uint256 totalGames, uint256 totalWins, uint256 totalBets, uint256 totalRewards, uint256 totalBurned, uint256 totalMarketing, uint256 totalProfit, uint256 totalDevelopment))",
+                    "function getRewardLevels() external view returns (tuple(uint256 probability, uint256 maoReward, uint256 piReward, string name)[])",
+                    "function getPlayerHistory(address player) external view returns (tuple(address player, uint8 tokenType, uint256 betAmount, uint256 rewardAmount, uint8 rewardLevel, uint256 timestamp, bool isWin, uint256 burnedAmount, uint256 marketingAmount, uint256 rewardPoolAmount, uint256 developmentAmount, uint256 userBonus, uint256 dailyBonus)[])"
+                ];
+
+                this.init();
+            }
+
+            async init() {
+                this.bindEvents();
+                await this.loadRewardLevels();
+            }
+
+            bindEvents() {
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
+                document.getElementById('maoBtn').addEventListener('click', () => this.selectToken('MAO'));
+                document.getElementById('piBtn').addEventListener('click', () => this.selectToken('PI'));
+                document.getElementById('playBtn').addEventListener('click', () => this.playGame());
+                document.getElementById('closeModal').addEventListener('click', () => this.closeModal());
+            }
+
+            async connectWallet() {
+                try {
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('请安装MetaMask钱包！');
+                        return;
+                    }
+
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = provider.getSigner();
+                    this.contract = new ethers.Contract(this.addresses.GAME_CONTRACT, this.gameABI, this.signer);
+
+                    document.getElementById('walletStatus').textContent = `已连接: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    document.getElementById('userInfo').style.display = 'block';
+
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                } catch (error) {
+                    console.error('连接失败:', error);
+                    alert('钱包连接失败！');
+                }
+            }
+
+            selectToken(token) {
+                this.selectedToken = token;
+                document.getElementById('maoBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                document.getElementById('piBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                
+                if (token === 'MAO') {
+                    document.getElementById('maoBtn').className += ' active bg-yellow-500 text-black';
+                    document.getElementById('piBtn').className += ' bg-purple-500 text-white';
+                } else {
+                    document.getElementById('piBtn').className += ' active bg-purple-500 text-white';
+                    document.getElementById('maoBtn').className += ' bg-yellow-500 text-black';
+                }
+            }
+
+            async playGame() {
+                if (!this.contract || this.isSpinning) return;
+
+                try {
+                    this.isSpinning = true;
+                    document.getElementById('playBtn').disabled = true;
+                    document.getElementById('wheel').classList.add('spinning');
+
+                    // 调用游戏合约
+                    const tx = this.selectedToken === 'MAO' 
+                        ? await this.contract.playMAOGame()
+                        : await this.contract.playPIGame();
+
+                    await tx.wait();
+                    
+                    // 显示结果
+                    this.showResult();
+                    
+                    // 重新加载数据
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                    
+                } catch (error) {
+                    console.error('游戏失败:', error);
+                    alert('游戏失败: ' + error.message);
+                } finally {
+                    this.isSpinning = false;
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('wheel').classList.remove('spinning');
+                }
+            }
+
+            async loadUserInfo() {
+                try {
+                    const userAddress = await this.signer.getAddress();
+                    const userLevel = await this.contract.getUserLevel(userAddress);
+                    
+                    const levelNames = ['青铜', '白银', '黄金', '铂金', '钻石'];
+                    const levelClasses = ['level-bronze', 'level-silver', 'level-gold', 'level-platinum', 'level-diamond'];
+                    
+                    document.getElementById('userLevel').textContent = levelNames[userLevel.level];
+                    document.getElementById('userLevel').className = `text-2xl font-bold text-white ${levelClasses[userLevel.level]}`;
+                    document.getElementById('totalGames').textContent = userLevel.totalGames.toString();
+                    document.getElementById('bonusRate').textContent = userLevel.bonusRate + '%';
+                    document.getElementById('consecutiveDays').textContent = userLevel.consecutiveDays.toString();
+                    
+                } catch (error) {
+                    console.error('加载用户信息失败:', error);
+                }
+            }
+
+            async loadGameStats() {
+                try {
+                    const maoStats = await this.contract.getGameStats(0);
+                    const piStats = await this.contract.getGameStats(1);
+                    
+                    const totalGames = maoStats.totalGames.add(piStats.totalGames);
+                    const totalWins = maoStats.totalWins.add(piStats.totalWins);
+                    const totalReward = maoStats.totalRewards.add(piStats.totalRewards);
+                    
+                    document.getElementById('totalGamesStat').textContent = totalGames.toString();
+                    document.getElementById('winRate').textContent = totalGames.gt(0) ? 
+                        Math.round(totalWins.mul(100).div(totalGames).toNumber()) + '%' : '0%';
+                    document.getElementById('totalReward').textContent = ethers.utils.formatEther(totalReward);
+                    
+                } catch (error) {
+                    console.error('加载游戏统计失败:', error);
+                }
+            }
+
+            async loadRewardLevels() {
+                try {
+                    const rewardLevels = await this.contract.getRewardLevels();
+                    const container = document.getElementById('rewardLevels');
+                    container.innerHTML = '';
+                    
+                    rewardLevels.forEach((level, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-white/10 rounded-lg p-4 text-center';
+                        div.innerHTML = `
+                            <div class="text-lg font-bold text-white">${level.name}</div>
+                            <div class="text-sm text-white/70">概率: ${level.probability/10}%</div>
+                            <div class="text-sm text-yellow-400">MAO: ${ethers.utils.formatEther(level.maoReward)}</div>
+                            <div class="text-sm text-purple-400">PI: ${ethers.utils.formatEther(level.piReward)}</div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } catch (error) {
+                    console.error('加载奖励等级失败:', error);
+                }
+            }
+
+            showResult() {
+                // 模拟结果显示
+                const isWin = Math.random() < 0.4; // 40%胜率
+                const modal = document.getElementById('resultModal');
+                
+                if (isWin) {
+                    document.getElementById('resultIcon').textContent = '🎉';
+                    document.getElementById('resultTitle').textContent = '恭喜获胜！';
+                    document.getElementById('resultMessage').textContent = '你获得了奖励';
+                    document.getElementById('resultReward').textContent = '100 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +5%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +20 MAO';
+                } else {
+                    document.getElementById('resultIcon').textContent = '😔';
+                    document.getElementById('resultTitle').textContent = '很遗憾';
+                    document.getElementById('resultMessage').textContent = '下次再接再厉';
+                    document.getElementById('resultReward').textContent = '0 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +0%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +0';
+                }
+                
+                modal.classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('resultModal').classList.add('hidden');
+            }
+        }
+
+        // 初始化游戏管理器
+        const gameManager = new GameManagerV6();
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 MAO Intelligent Wheel - V6 测试版</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            min-height: 100vh; 
+            font-family: Inter, sans-serif; 
+        }
+        .glass { 
+            background: rgba(255,255,255,0.15); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255,255,255,0.3); 
+        }
+        .wheel { 
+            width: 300px; 
+            height: 300px; 
+            border-radius: 50%; 
+            background: conic-gradient(from 0deg, #ef4444 0deg 144deg, #10b981 144deg 360deg); 
+            transition: transform 4s ease; 
+            position: relative; 
+        }
+        .spinning { animation: spin 4s ease; }
+        @keyframes spin { 
+            from { transform: rotate(0deg); } 
+            to { transform: rotate(1800deg); } 
+        }
+        .level-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .level-bronze { background: #cd7f32; color: white; }
+        .level-silver { background: #c0c0c0; color: black; }
+        .level-gold { background: #ffd700; color: black; }
+        .level-platinum { background: #e5e4e2; color: black; }
+        .level-diamond { background: #b9f2ff; color: black; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <!-- 头部 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">🎰 MAO Intelligent Wheel</h1>
+            <p class="text-xl text-white/80">V6 智能奖励系统测试版</p>
+        </div>
+
+        <!-- 钱包连接 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-semibold text-white">🔗 钱包连接</h3>
+                    <p class="text-white/70" id="walletStatus">未连接</p>
+                </div>
+                <button id="connectBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                    连接钱包
+                </button>
+            </div>
+        </div>
+
+        <!-- 用户信息 -->
+        <div class="glass rounded-2xl p-6 mb-6" id="userInfo" style="display: none;">
+            <h3 class="text-xl font-semibold text-white mb-4">👤 用户信息</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="userLevel">青铜</div>
+                    <div class="text-sm text-white/70">用户等级</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="totalGames">0</div>
+                    <div class="text-sm text-white/70">总游戏次数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="bonusRate">0%</div>
+                    <div class="text-sm text-white/70">奖励加成</div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="consecutiveDays">0</div>
+                    <div class="text-sm text-white/70">连续游戏天数</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-white" id="dailyGames">0</div>
+                    <div class="text-sm text-white/70">今日游戏次数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🎮 游戏区域</h3>
+            
+            <!-- 转盘 -->
+            <div class="flex justify-center mb-6">
+                <div class="wheel" id="wheel"></div>
+            </div>
+            
+            <!-- 代币选择 -->
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="maoBtn" class="token-btn active bg-yellow-500 text-black px-6 py-3 rounded-lg font-bold">
+                    🪙 MAO 游戏 (100 MAO)
+                </button>
+                <button id="piBtn" class="token-btn bg-purple-500 text-white px-6 py-3 rounded-lg font-bold">
+                    💎 PI 游戏 (500 PI)
+                </button>
+            </div>
+            
+            <!-- 游戏按钮 -->
+            <div class="text-center">
+                <button id="playBtn" class="game-btn bg-green-500 hover:bg-green-600 text-white px-8 py-4 rounded-xl text-xl font-bold">
+                    开始游戏
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏统计 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📊 游戏统计</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-blue-400" id="totalGamesStat">0</div>
+                    <div class="text-sm">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-green-400" id="winRate">0%</div>
+                    <div class="text-sm">胜率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-yellow-400" id="totalReward">0</div>
+                    <div class="text-sm">总奖励</div>
+                </div>
+                <div class="stat-card">
+                    <div class="text-2xl font-bold text-purple-400" id="dynamicWinRate">40%</div>
+                    <div class="text-sm">动态胜率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 奖励等级 -->
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h3 class="text-xl font-semibold text-white mb-4">🏆 奖励等级</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="rewardLevels">
+                <!-- 动态生成奖励等级 -->
+            </div>
+        </div>
+
+        <!-- 游戏历史 -->
+        <div class="glass rounded-2xl p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">📜 游戏历史</h3>
+            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-white/50">暂无游戏记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div id="resultIcon" class="text-6xl text-center mb-4">🎉</div>
+            <h3 id="resultTitle" class="text-2xl font-bold text-center mb-2">恭喜获胜！</h3>
+            <p id="resultMessage" class="text-center mb-4">你获得了奖励</p>
+            <div id="resultReward" class="text-3xl font-bold text-yellow-500 text-center mb-6">0 MAO</div>
+            <div class="text-center space-y-2 mb-6">
+                <div id="userBonus" class="text-sm text-green-600">用户加成: +0%</div>
+                <div id="dailyBonus" class="text-sm text-blue-600">每日奖励: +0</div>
+            </div>
+            <button id="closeModal" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg">
+                继续游戏
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class GameManagerV6 {
+            constructor() {
+                this.contract = null;
+                this.signer = null;
+                this.selectedToken = 'MAO';
+                this.isSpinning = false;
+                
+                this.addresses = {
+                    MAO_TOKEN: "0x22f49BCb3DAd370a9268bA3Fca33cB037ca3d022",
+                    PI_TOKEN: "0xFd4680e25E05b3435C7F698668d1ce80D2a9F444",
+                    GAME_CONTRACT: "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913"
+                };
+
+                this.tokenABI = [
+                    "function balanceOf(address owner) external view returns (uint256)",
+                    "function approve(address spender, uint256 amount) external returns (bool)",
+                    "function allowance(address owner, address spender) external view returns (uint256)"
+                ];
+                
+                this.gameABI = [
+                    "function playMAOGame() external",
+                    "function playPIGame() external",
+                    "function getUserLevel(address player) external view returns (tuple(uint256 totalGames, uint256 level, uint256 bonusRate, uint256 lastGameTime, uint256 consecutiveDays))",
+                    "function getGameStats(uint8 tokenType) external view returns (tuple(uint256 totalGames, uint256 totalWins, uint256 totalBets, uint256 totalRewards, uint256 totalBurned, uint256 totalMarketing, uint256 totalProfit, uint256 totalDevelopment))",
+                    "function getRewardLevels() external view returns (tuple(uint256 probability, uint256 maoReward, uint256 piReward, string name)[])",
+                    "function getPlayerHistory(address player) external view returns (tuple(address player, uint8 tokenType, uint256 betAmount, uint256 rewardAmount, uint8 rewardLevel, uint256 timestamp, bool isWin, uint256 burnedAmount, uint256 marketingAmount, uint256 rewardPoolAmount, uint256 developmentAmount, uint256 userBonus, uint256 dailyBonus)[])"
+                ];
+
+                this.init();
+            }
+
+            async init() {
+                this.bindEvents();
+                await this.loadRewardLevels();
+            }
+
+            bindEvents() {
+                document.getElementById('connectBtn').addEventListener('click', () => this.connectWallet());
+                document.getElementById('maoBtn').addEventListener('click', () => this.selectToken('MAO'));
+                document.getElementById('piBtn').addEventListener('click', () => this.selectToken('PI'));
+                document.getElementById('playBtn').addEventListener('click', () => this.playGame());
+                document.getElementById('closeModal').addEventListener('click', () => this.closeModal());
+            }
+
+            async connectWallet() {
+                try {
+                    if (typeof window.ethereum === 'undefined') {
+                        alert('请安装MetaMask钱包！');
+                        return;
+                    }
+
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.signer = provider.getSigner();
+                    this.contract = new ethers.Contract(this.addresses.GAME_CONTRACT, this.gameABI, this.signer);
+
+                    document.getElementById('walletStatus').textContent = `已连接: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                    document.getElementById('userInfo').style.display = 'block';
+
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                } catch (error) {
+                    console.error('连接失败:', error);
+                    alert('钱包连接失败！');
+                }
+            }
+
+            selectToken(token) {
+                this.selectedToken = token;
+                document.getElementById('maoBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                document.getElementById('piBtn').className = 'token-btn px-6 py-3 rounded-lg font-bold';
+                
+                if (token === 'MAO') {
+                    document.getElementById('maoBtn').className += ' active bg-yellow-500 text-black';
+                    document.getElementById('piBtn').className += ' bg-purple-500 text-white';
+                } else {
+                    document.getElementById('piBtn').className += ' active bg-purple-500 text-white';
+                    document.getElementById('maoBtn').className += ' bg-yellow-500 text-black';
+                }
+            }
+
+            async playGame() {
+                if (!this.contract || this.isSpinning) return;
+
+                try {
+                    this.isSpinning = true;
+                    document.getElementById('playBtn').disabled = true;
+                    document.getElementById('wheel').classList.add('spinning');
+
+                    // 调用游戏合约
+                    const tx = this.selectedToken === 'MAO' 
+                        ? await this.contract.playMAOGame()
+                        : await this.contract.playPIGame();
+
+                    await tx.wait();
+                    
+                    // 显示结果
+                    this.showResult();
+                    
+                    // 重新加载数据
+                    await this.loadUserInfo();
+                    await this.loadGameStats();
+                    
+                } catch (error) {
+                    console.error('游戏失败:', error);
+                    alert('游戏失败: ' + error.message);
+                } finally {
+                    this.isSpinning = false;
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('wheel').classList.remove('spinning');
+                }
+            }
+
+            async loadUserInfo() {
+                try {
+                    const userAddress = await this.signer.getAddress();
+                    const userLevel = await this.contract.getUserLevel(userAddress);
+                    
+                    const levelNames = ['青铜', '白银', '黄金', '铂金', '钻石'];
+                    const levelClasses = ['level-bronze', 'level-silver', 'level-gold', 'level-platinum', 'level-diamond'];
+                    
+                    document.getElementById('userLevel').textContent = levelNames[userLevel.level];
+                    document.getElementById('userLevel').className = `text-2xl font-bold text-white ${levelClasses[userLevel.level]}`;
+                    document.getElementById('totalGames').textContent = userLevel.totalGames.toString();
+                    document.getElementById('bonusRate').textContent = userLevel.bonusRate + '%';
+                    document.getElementById('consecutiveDays').textContent = userLevel.consecutiveDays.toString();
+                    
+                } catch (error) {
+                    console.error('加载用户信息失败:', error);
+                }
+            }
+
+            async loadGameStats() {
+                try {
+                    const maoStats = await this.contract.getGameStats(0);
+                    const piStats = await this.contract.getGameStats(1);
+                    
+                    const totalGames = maoStats.totalGames.add(piStats.totalGames);
+                    const totalWins = maoStats.totalWins.add(piStats.totalWins);
+                    const totalReward = maoStats.totalRewards.add(piStats.totalRewards);
+                    
+                    document.getElementById('totalGamesStat').textContent = totalGames.toString();
+                    document.getElementById('winRate').textContent = totalGames.gt(0) ? 
+                        Math.round(totalWins.mul(100).div(totalGames).toNumber()) + '%' : '0%';
+                    document.getElementById('totalReward').textContent = ethers.utils.formatEther(totalReward);
+                    
+                } catch (error) {
+                    console.error('加载游戏统计失败:', error);
+                }
+            }
+
+            async loadRewardLevels() {
+                try {
+                    const rewardLevels = await this.contract.getRewardLevels();
+                    const container = document.getElementById('rewardLevels');
+                    container.innerHTML = '';
+                    
+                    rewardLevels.forEach((level, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-white/10 rounded-lg p-4 text-center';
+                        div.innerHTML = `
+                            <div class="text-lg font-bold text-white">${level.name}</div>
+                            <div class="text-sm text-white/70">概率: ${level.probability/10}%</div>
+                            <div class="text-sm text-yellow-400">MAO: ${ethers.utils.formatEther(level.maoReward)}</div>
+                            <div class="text-sm text-purple-400">PI: ${ethers.utils.formatEther(level.piReward)}</div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } catch (error) {
+                    console.error('加载奖励等级失败:', error);
+                }
+            }
+
+            showResult() {
+                // 模拟结果显示
+                const isWin = Math.random() < 0.4; // 40%胜率
+                const modal = document.getElementById('resultModal');
+                
+                if (isWin) {
+                    document.getElementById('resultIcon').textContent = '🎉';
+                    document.getElementById('resultTitle').textContent = '恭喜获胜！';
+                    document.getElementById('resultMessage').textContent = '你获得了奖励';
+                    document.getElementById('resultReward').textContent = '100 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +5%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +20 MAO';
+                } else {
+                    document.getElementById('resultIcon').textContent = '😔';
+                    document.getElementById('resultTitle').textContent = '很遗憾';
+                    document.getElementById('resultMessage').textContent = '下次再接再厉';
+                    document.getElementById('resultReward').textContent = '0 MAO';
+                    document.getElementById('userBonus').textContent = '用户加成: +0%';
+                    document.getElementById('dailyBonus').textContent = '每日奖励: +0';
+                }
+                
+                modal.classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('resultModal').classList.add('hidden');
+            }
+        }
+
+        // 初始化游戏管理器
+        const gameManager = new GameManagerV6();
+    </script>
+</body>
+</html> 

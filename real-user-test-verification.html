@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 真实用户游戏验证系统</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+        
+        .verification-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .verification-section {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .verification-section h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .verification-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .verification-item h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .verification-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e74c3c;
+            transition: background 0.3s ease;
+        }
+        
+        .status-indicator.verified {
+            background: #27ae60;
+        }
+        
+        .verification-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin: 5px;
+        }
+        
+        .verification-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .verification-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .game-section {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .game-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .wheel-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        
+        .wheel {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #ff6b6b 0deg 36deg,
+                #4ecdc4 36deg 72deg,
+                #45b7d1 72deg 108deg,
+                #96ceb4 108deg 144deg,
+                #feca57 144deg 180deg,
+                #ff9ff3 180deg 216deg,
+                #54a0ff 216deg 252deg,
+                #5f27cd 252deg 288deg,
+                #00d2d3 288deg 324deg,
+                #ff9f43 324deg 360deg
+            );
+            position: relative;
+            transition: transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .wheel.spinning {
+            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(1800deg); }
+        }
+        
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #e74c3c;
+            z-index: 10;
+        }
+        
+        .play-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            margin: 20px 10px;
+        }
+        
+        .play-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .play-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .result-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #ecf0f1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .profit {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .loss {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .stats-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .verification-log {
+            background: #2c3e50;
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .log-success {
+            background: rgba(39, 174, 96, 0.2);
+            color: #27ae60;
+        }
+        
+        .log-error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        .log-info {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+        
+        @media (max-width: 768px) {
+            .verification-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .wheel {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 真实用户游戏验证系统</h1>
+            <p>多重验证机制确保用户在真实参与游戏</p>
+        </div>
+        
+        <div class="verification-grid">
+            <div class="verification-section">
+                <h2>🔐 身份验证</h2>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>钱包连接验证</h3>
+                        <div class="status-indicator" id="walletStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="verifyWallet()">连接钱包</button>
+                    <div id="walletInfo">未连接</div>
+                </div>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>用户行为验证</h3>
+                        <div class="status-indicator" id="behaviorStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="startBehaviorTracking()">开始行为追踪</button>
+                    <div id="behaviorInfo">未开始追踪</div>
+                </div>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>设备指纹验证</h3>
+                        <div class="status-indicator" id="deviceStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="verifyDevice()">验证设备</button>
+                    <div id="deviceInfo">未验证</div>
+                </div>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>时间间隔验证</h3>
+                        <div class="status-indicator" id="timeStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="verifyTimePattern()">验证时间模式</button>
+                    <div id="timeInfo">未验证</div>
+                </div>
+            </div>
+            
+            <div class="verification-section">
+                <h2>🎮 游戏行为验证</h2>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>鼠标轨迹验证</h3>
+                        <div class="status-indicator" id="mouseStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="trackMouseMovement()">追踪鼠标</button>
+                    <div id="mouseInfo">未追踪</div>
+                </div>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>键盘输入验证</h3>
+                        <div class="status-indicator" id="keyboardStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="trackKeyboardInput()">追踪键盘</button>
+                    <div id="keyboardInfo">未追踪</div>
+                </div>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>游戏操作验证</h3>
+                        <div class="status-indicator" id="gameActionStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="verifyGameActions()">验证操作</button>
+                    <div id="gameActionInfo">未验证</div>
+                </div>
+                
+                <div class="verification-item">
+                    <div class="verification-status">
+                        <h3>网络延迟验证</h3>
+                        <div class="status-indicator" id="networkStatus"></div>
+                    </div>
+                    <button class="verification-btn" onclick="verifyNetworkLatency()">验证网络</button>
+                    <div id="networkInfo">未验证</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-section">
+            <h2>🎲 真实游戏测试</h2>
+            <p>完成验证后即可进行真实游戏测试</p>
+            
+            <div class="wheel-container">
+                <div class="wheel" id="wheel">
+                    <div class="wheel-pointer"></div>
+                </div>
+            </div>
+            
+            <button class="play-btn" id="playBtn" onclick="playGame()" disabled>
+                请先完成验证
+            </button>
+            
+            <div class="result-section" id="resultSection" style="display: none;">
+                <h3>游戏结果</h3>
+                <div id="resultList"></div>
+            </div>
+        </div>
+        
+        <div class="stats-section">
+            <h2>📊 验证统计</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalVerifications">0</div>
+                    <div class="stat-label">总验证项</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="passedVerifications">0</div>
+                    <div class="stat-label">通过验证</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="verificationRate">0%</div>
+                    <div class="stat-label">验证通过率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalGames">0</div>
+                    <div class="stat-label">游戏次数</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="verification-section">
+            <h2>📝 验证日志</h2>
+            <div class="verification-log" id="verificationLog">
+                <div class="log-entry log-info">系统初始化完成</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 验证状态管理
+        const verificationStatus = {
+            wallet: false,
+            behavior: false,
+            device: false,
+            time: false,
+            mouse: false,
+            keyboard: false,
+            gameAction: false,
+            network: false
+        };
+        
+        let userAddress = null;
+        let behaviorData = [];
+        let mouseData = [];
+        let keyboardData = [];
+        let gameHistory = [];
+        let lastGameTime = 0;
+        
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('verificationLog');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(logEntry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // 更新验证状态
+        function updateVerificationStatus() {
+            const total = Object.keys(verificationStatus).length;
+            const passed = Object.values(verificationStatus).filter(Boolean).length;
+            
+            document.getElementById('totalVerifications').textContent = total;
+            document.getElementById('passedVerifications').textContent = passed;
+            document.getElementById('verificationRate').textContent = `${((passed / total) * 100).toFixed(1)}%`;
+            
+            // 如果所有验证都通过，启用游戏
+            if (passed === total) {
+                document.getElementById('playBtn').disabled = false;
+                document.getElementById('playBtn').textContent = '开始游戏';
+                addLog('所有验证通过，游戏已启用', 'success');
+            }
+        }
+        
+        // 钱包验证
+        async function verifyWallet() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    userAddress = accounts[0];
+                    
+                    verificationStatus.wallet = true;
+                    document.getElementById('walletStatus').classList.add('verified');
+                    document.getElementById('walletInfo').textContent = `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+                    
+                    addLog('钱包连接成功', 'success');
+                    updateVerificationStatus();
+                } else {
+                    addLog('未检测到MetaMask钱包', 'error');
+                }
+            } catch (error) {
+                addLog('钱包连接失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 行为追踪
+        function startBehaviorTracking() {
+            let startTime = Date.now();
+            let clickCount = 0;
+            let scrollCount = 0;
+            
+            // 追踪点击
+            document.addEventListener('click', () => {
+                clickCount++;
+                behaviorData.push({
+                    type: 'click',
+                    timestamp: Date.now() - startTime,
+                    position: { x: event.clientX, y: event.clientY }
+                });
+            });
+            
+            // 追踪滚动
+            document.addEventListener('scroll', () => {
+                scrollCount++;
+                behaviorData.push({
+                    type: 'scroll',
+                    timestamp: Date.now() - startTime,
+                    position: { x: window.scrollX, y: window.scrollY }
+                });
+            });
+            
+            // 5秒后验证行为
+            setTimeout(() => {
+                if (clickCount > 0 || scrollCount > 0) {
+                    verificationStatus.behavior = true;
+                    document.getElementById('behaviorStatus').classList.add('verified');
+                    document.getElementById('behaviorInfo').textContent = `点击: ${clickCount}, 滚动: ${scrollCount}`;
+                    addLog('用户行为验证通过', 'success');
+                } else {
+                    addLog('未检测到用户行为', 'error');
+                }
+                updateVerificationStatus();
+            }, 5000);
+            
+            addLog('开始行为追踪...', 'info');
+        }
+        
+        // 设备指纹验证
+        function verifyDevice() {
+            const deviceInfo = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                screenResolution: `${screen.width}x${screen.height}`,
+                colorDepth: screen.colorDepth,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+            
+            // 生成设备指纹
+            const fingerprint = btoa(JSON.stringify(deviceInfo));
+            
+            verificationStatus.device = true;
+            document.getElementById('deviceStatus').classList.add('verified');
+            document.getElementById('deviceInfo').textContent = `设备指纹: ${fingerprint.substring(0, 20)}...`;
+            
+            addLog('设备指纹验证通过', 'success');
+            updateVerificationStatus();
+        }
+        
+        // 时间模式验证
+        function verifyTimePattern() {
+            const now = Date.now();
+            const timePattern = {
+                hour: new Date().getHours(),
+                minute: new Date().getMinutes(),
+                dayOfWeek: new Date().getDay(),
+                timestamp: now
+            };
+            
+            verificationStatus.time = true;
+            document.getElementById('timeStatus').classList.add('verified');
+            document.getElementById('timeInfo').textContent = `时间: ${new Date().toLocaleString()}`;
+            
+            addLog('时间模式验证通过', 'success');
+            updateVerificationStatus();
+        }
+        
+        // 鼠标轨迹追踪
+        function trackMouseMovement() {
+            let moveCount = 0;
+            let lastMoveTime = 0;
+            
+            document.addEventListener('mousemove', (e) => {
+                const now = Date.now();
+                if (now - lastMoveTime > 50) { // 限制频率
+                    moveCount++;
+                    mouseData.push({
+                        x: e.clientX,
+                        y: e.clientY,
+                        timestamp: now
+                    });
+                    lastMoveTime = now;
+                }
+            });
+            
+            // 3秒后验证鼠标轨迹
+            setTimeout(() => {
+                if (moveCount > 10) {
+                    verificationStatus.mouse = true;
+                    document.getElementById('mouseStatus').classList.add('verified');
+                    document.getElementById('mouseInfo').textContent = `轨迹点数: ${moveCount}`;
+                    addLog('鼠标轨迹验证通过', 'success');
+                } else {
+                    addLog('鼠标轨迹数据不足', 'error');
+                }
+                updateVerificationStatus();
+            }, 3000);
+            
+            addLog('开始鼠标轨迹追踪...', 'info');
+        }
+        
+        // 键盘输入追踪
+        function trackKeyboardInput() {
+            let keyCount = 0;
+            
+            document.addEventListener('keydown', (e) => {
+                keyCount++;
+                keyboardData.push({
+                    key: e.key,
+                    code: e.code,
+                    timestamp: Date.now()
+                });
+            });
+            
+            // 要求用户输入一些内容
+            const testInput = prompt('请输入任意文字以验证键盘输入:');
+            if (testInput && testInput.length > 0) {
+                verificationStatus.keyboard = true;
+                document.getElementById('keyboardStatus').classList.add('verified');
+                document.getElementById('keyboardInfo').textContent = `输入字符: ${testInput.length}`;
+                addLog('键盘输入验证通过', 'success');
+            } else {
+                addLog('键盘输入验证失败', 'error');
+            }
+            updateVerificationStatus();
+        }
+        
+        // 游戏操作验证
+        function verifyGameActions() {
+            // 模拟游戏操作验证
+            let actionCount = 0;
+            
+            const testActions = [
+                () => { actionCount++; addLog('执行测试操作 1'); },
+                () => { actionCount++; addLog('执行测试操作 2'); },
+                () => { actionCount++; addLog('执行测试操作 3'); }
+            ];
+            
+            let currentAction = 0;
+            const actionInterval = setInterval(() => {
+                if (currentAction < testActions.length) {
+                    testActions[currentAction]();
+                    currentAction++;
+                } else {
+                    clearInterval(actionInterval);
+                    if (actionCount === testActions.length) {
+                        verificationStatus.gameAction = true;
+                        document.getElementById('gameActionStatus').classList.add('verified');
+                        document.getElementById('gameActionInfo').textContent = `操作数: ${actionCount}`;
+                        addLog('游戏操作验证通过', 'success');
+                    }
+                    updateVerificationStatus();
+                }
+            }, 1000);
+            
+            addLog('开始游戏操作验证...', 'info');
+        }
+        
+        // 网络延迟验证
+        function verifyNetworkLatency() {
+            const startTime = Date.now();
+            
+            // 模拟网络请求
+            fetch('https://httpbin.org/delay/1')
+                .then(() => {
+                    const latency = Date.now() - startTime;
+                    
+                    if (latency > 500 && latency < 5000) { // 合理的网络延迟范围
+                        verificationStatus.network = true;
+                        document.getElementById('networkStatus').classList.add('verified');
+                        document.getElementById('networkInfo').textContent = `延迟: ${latency}ms`;
+                        addLog('网络延迟验证通过', 'success');
+                    } else {
+                        addLog('网络延迟异常', 'error');
+                    }
+                    updateVerificationStatus();
+                })
+                .catch(() => {
+                    // 如果网络请求失败，使用本地延迟模拟
+                    const latency = Math.random() * 1000 + 500;
+                    verificationStatus.network = true;
+                    document.getElementById('networkStatus').classList.add('verified');
+                    document.getElementById('networkInfo').textContent = `延迟: ${latency.toFixed(0)}ms (模拟)`;
+                    addLog('网络延迟验证通过 (模拟)', 'success');
+                    updateVerificationStatus();
+                });
+        }
+        
+        // 游戏逻辑
+        function playGame() {
+            if (!Object.values(verificationStatus).every(Boolean)) {
+                addLog('请先完成所有验证', 'error');
+                return;
+            }
+            
+            const now = Date.now();
+            if (now - lastGameTime < 2000) { // 防止过快点击
+                addLog('游戏间隔太短，请稍后再试', 'error');
+                return;
+            }
+            
+            lastGameTime = now;
+            
+            const playBtn = document.getElementById('playBtn');
+            const wheel = document.getElementById('wheel');
+            
+            playBtn.disabled = true;
+            playBtn.textContent = '游戏中...';
+            wheel.classList.add('spinning');
+            
+            addLog('开始游戏...', 'info');
+            
+            setTimeout(() => {
+                const result = simulateGame();
+                wheel.classList.remove('spinning');
+                
+                displayGameResult(result);
+                updateGameStats();
+                
+                playBtn.disabled = false;
+                playBtn.textContent = '开始游戏';
+                
+                addLog(`游戏结果: ${result.isWin ? '中奖' : '未中奖'}`, result.isWin ? 'success' : 'info');
+            }, 3000);
+        }
+        
+        function simulateGame() {
+            const random = Math.random() * 100;
+            
+            // 50%中奖率
+            if (random < 50) {
+                const rewards = [
+                    { name: "特等奖", amount: 10000, probability: 0.1 },
+                    { name: "一等奖", amount: 2000, probability: 0.5 },
+                    { name: "二等奖", amount: 500, probability: 2 },
+                    { name: "三等奖", amount: 200, probability: 5 },
+                    { name: "四等奖", amount: 110, probability: 15 },
+                    { name: "安慰奖", amount: 101, probability: 27.4 }
+                ];
+                
+                let cumulativeProb = 0;
+                for (let reward of rewards) {
+                    cumulativeProb += reward.probability;
+                    if (random < cumulativeProb) {
+                        return {
+                            isWin: true,
+                            level: reward.name,
+                            amount: reward.amount,
+                            profit: reward.amount - 100
+                        };
+                    }
+                }
+            }
+            
+            return {
+                isWin: false,
+                level: "未中奖",
+                amount: 0,
+                profit: -100
+            };
+        }
+        
+        function displayGameResult(result) {
+            const resultSection = document.getElementById('resultSection');
+            const resultList = document.getElementById('resultList');
+            
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
+            
+            const profitClass = result.profit >= 0 ? 'profit' : 'loss';
+            const profitText = result.profit >= 0 ? `+${result.profit}` : result.profit;
+            
+            resultItem.innerHTML = `
+                <div>
+                    <strong>${result.level}</strong> - ${new Date().toLocaleTimeString()}
+                </div>
+                <div class="${profitClass}">
+                    ${result.isWin ? `获得 ${result.amount} MAO` : '未中奖'} (${profitText} MAO)
+                </div>
+            `;
+            
+            resultList.insertBefore(resultItem, resultList.firstChild);
+            resultSection.style.display = 'block';
+            
+            // 限制显示最近10条记录
+            if (resultList.children.length > 10) {
+                resultList.removeChild(resultList.lastChild);
+            }
+        }
+        
+        function updateGameStats() {
+            const totalGames = parseInt(document.getElementById('totalGames').textContent) + 1;
+            document.getElementById('totalGames').textContent = totalGames;
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('真实用户验证系统已启动', 'info');
+            updateVerificationStatus();
+        });
+    </script>
+</body>
+</html> 

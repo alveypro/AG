@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 TP钱包连接指南</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .step-box {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .big-link {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            text-decoration: none;
+            display: block;
+            margin: 20px 0;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        .copy-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .url-box {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+            border: 2px solid #4ECDC4;
+        }
+        .warning {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 TP钱包连接指南</h1>
+        
+        <div class="warning">
+            <h3>⚠️ 重要提醒</h3>
+            <p><strong>必须在手机TP钱包中打开，不是在电脑浏览器！</strong></p>
+        </div>
+
+        <div class="step-box">
+            <h2>📱 方法1：在TP钱包内直接打开</h2>
+            <ol>
+                <li><strong>打开手机上的TP钱包APP</strong></li>
+                <li><strong>点击底部"发现"或"浏览器"</strong></li>
+                <li><strong>在地址栏输入以下地址：</strong></li>
+            </ol>
+            
+            <div class="url-box" id="deployUrl">
+file:///Users/mac/Desktop/MAOGAME/simple-click-deploy.html
+            </div>
+            <button class="copy-btn" onclick="copyUrl()">📋 复制地址</button>
+            
+            <p><strong>或者输入简化地址：</strong></p>
+            <div class="url-box">
+localhost/MAOGAME/simple-click-deploy.html
+            </div>
+            <button class="copy-btn" onclick="copySimpleUrl()">📋 复制简化地址</button>
+        </div>
+
+        <div class="step-box">
+            <h2>🔗 方法2：通过微信发送到手机</h2>
+            <ol>
+                <li><strong>点击下方按钮复制链接</strong></li>
+                <li><strong>通过微信发送给自己</strong></li>
+                <li><strong>在手机上点击链接</strong></li>
+                <li><strong>选择用TP钱包打开</strong></li>
+            </ol>
+            
+            <button class="copy-btn" onclick="copyForWechat()">📋 复制发送微信</button>
+        </div>
+
+        <div class="step-box">
+            <h2>🆘 方法3：如果还是不行</h2>
+            <p><strong>可能是路径问题，试试这个替代方案：</strong></p>
+            
+            <a href="#" onclick="openAlternative()" class="big-link">
+                🔧 打开替代连接工具
+            </a>
+            
+            <p><small>这会在当前窗口打开一个简化版本</small></p>
+        </div>
+
+        <div class="step-box">
+            <h2>✅ 成功连接的标志</h2>
+            <p><strong>如果连接成功，您会看到：</strong></p>
+            <ul>
+                <li>✅ 钱包地址显示</li>
+                <li>✅ 网络显示为AlveyChain (3797)</li>
+                <li>✅ 余额显示</li>
+                <li>✅ 可以点击部署按钮</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function copyUrl() {
+            const url = document.getElementById('deployUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('✅ 地址已复制！请在TP钱包浏览器中粘贴');
+            }).catch(() => {
+                alert('请手动复制地址');
+            });
+        }
+
+        function copySimpleUrl() {
+            const url = 'localhost/MAOGAME/simple-click-deploy.html';
+            navigator.clipboard.writeText(url).then(() => {
+                alert('✅ 简化地址已复制！');
+            }).catch(() => {
+                alert('请手动复制地址');
+            });
+        }
+
+        function copyForWechat() {
+            const message = `🚀 MAO游戏部署工具
+            
+请在TP钱包中打开此链接：
+file:///Users/mac/Desktop/MAOGAME/simple-click-deploy.html
+
+操作步骤：
+1. 在TP钱包中点击"浏览器"
+2. 粘贴上面的地址
+3. 点击大按钮开始部署`;
+            
+            navigator.clipboard.writeText(message).then(() => {
+                alert('✅ 已复制！请发送到微信群或给自己');
+            });
+        }
+
+        function openAlternative() {
+            // 创建一个内嵌的简化版本
+            document.body.innerHTML = `
+                <div class="container">
+                    <h1>🔧 简化连接工具</h1>
+                    <div class="step-box">
+                        <h2>🔗 测试连接</h2>
+                        <button class="big-link" onclick="testConnection()" style="cursor: pointer; border: none;">
+                            🎒 测试TP钱包连接
+                        </button>
+                        <div id="result" style="margin-top: 20px;"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function testConnection() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p style="color: yellow;">🔍 正在检测钱包...</p>';
+            
+            setTimeout(() => {
+                if (typeof window.ethereum !== 'undefined') {
+                    result.innerHTML = '<p style="color: green;">✅ 检测到Web3钱包！可以尝试连接</p>';
+                    
+                    // 尝试连接
+                    window.ethereum.request({method: 'eth_requestAccounts'})
+                        .then(accounts => {
+                            result.innerHTML = `<p style="color: green;">✅ 连接成功！</p><p>地址: ${accounts[0]}</p>`;
+                        })
+                        .catch(error => {
+                            result.innerHTML = `<p style="color: red;">❌ 连接失败: ${error.message}</p>`;
+                        });
+                } else {
+                    result.innerHTML = '<p style="color: red;">❌ 未检测到钱包，请确保在TP钱包中打开</p>';
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html> 

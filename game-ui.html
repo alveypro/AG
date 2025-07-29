@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 MAO游戏 - 全中奖盈利转盘</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        
+        .game-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .wheel-container {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .wheel {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #ff6b6b 0deg 36deg,
+                #4ecdc4 36deg 72deg,
+                #45b7d1 72deg 108deg,
+                #96ceb4 108deg 144deg,
+                #feca57 144deg 180deg,
+                #ff9ff3 180deg 216deg,
+                #54a0ff 216deg 252deg,
+                #5f27cd 252deg 288deg,
+                #00d2d3 288deg 324deg,
+                #ff9f43 324deg 360deg
+            );
+            margin: 0 auto 20px;
+            position: relative;
+            transition: transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .wheel.spinning {
+            animation: spin 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(1440deg); }
+        }
+        
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: #2c3e50;
+            border-radius: 50%;
+            border: 5px solid #fff;
+        }
+        
+        .wheel-pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #e74c3c;
+            z-index: 10;
+        }
+        
+        .game-controls {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 20px;
+            padding: 30px;
+        }
+        
+        .token-selector {
+            margin-bottom: 30px;
+        }
+        
+        .token-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.3s ease;
+        }
+        
+        .token-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .token-btn.active {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+        
+        .play-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 30px;
+            font-size: 1.3em;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin: 20px 0;
+            transition: transform 0.3s ease;
+        }
+        
+        .play-btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .play-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .reward-display {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .reward-amount {
+            font-size: 2em;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+        
+        .reward-level {
+            font-size: 1.2em;
+            color: #8e44ad;
+            font-weight: bold;
+        }
+        
+        .stats-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .reward-levels {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .reward-levels h2 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .reward-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .reward-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .reward-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .reward-card.special {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border: 3px solid #ff6b6b;
+        }
+        
+        .reward-card.first {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            border: 3px solid #ff6b6b;
+        }
+        
+        .reward-card.second {
+            background: linear-gradient(135deg, #cd7f32, #daa520);
+            border: 3px solid #ff6b6b;
+        }
+        
+        .reward-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .reward-probability {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .reward-amount {
+            font-size: 1em;
+            color: #27ae60;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .reward-multiplier {
+            color: #8e44ad;
+            font-weight: bold;
+        }
+        
+        .history-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .profit {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .loss {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .game-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .wheel {
+                width: 250px;
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 MAO游戏 - 全中奖盈利转盘</h1>
+            <p>所有中奖都有盈利，让每个玩家都成为赢家！</p>
+        </div>
+        
+        <div class="highlight">
+            🎉 革命性创新：所有6个奖励等级都有盈利，中奖率50%，最高100倍奖励！
+        </div>
+        
+        <div class="game-section">
+            <div class="wheel-container">
+                <h2>🎰 幸运转盘</h2>
+                <div class="wheel" id="wheel">
+                    <div class="wheel-center"></div>
+                </div>
+                <div class="wheel-pointer"></div>
+                <div class="reward-display" id="rewardDisplay" style="display: none;">
+                    <div class="reward-amount" id="rewardAmount"></div>
+                    <div class="reward-level" id="rewardLevel"></div>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <h2>🎮 游戏控制</h2>
+                
+                <div class="token-selector">
+                    <h3>选择代币类型</h3>
+                    <button class="token-btn active" onclick="selectToken('MAO')">MAO游戏 (100 MAO)</button>
+                    <button class="token-btn" onclick="selectToken('PI')">PI游戏 (1000 PI)</button>
+                </div>
+                
+                <div class="play-btn-container">
+                    <button class="play-btn" id="playBtn" onclick="playGame()">
+                        🎯 开始游戏
+                    </button>
+                </div>
+                
+                <div class="game-info">
+                    <h3>🎯 游戏信息</h3>
+                    <p><strong>当前选择:</strong> <span id="currentToken">MAO</span></p>
+                    <p><strong>游戏费用:</strong> <span id="gameCost">100 MAO</span></p>
+                    <p><strong>中奖率:</strong> 50%</p>
+                    <p><strong>最大奖励:</strong> 100倍</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-section">
+            <h2>📊 游戏统计</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalGames">0</div>
+                    <div class="stat-label">总游戏次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalWins">0</div>
+                    <div class="stat-label">中奖次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="winRate">0%</div>
+                    <div class="stat-label">中奖率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalProfit">0</div>
+                    <div class="stat-label">总盈亏</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="reward-levels">
+            <h2>🏆 奖励等级</h2>
+            <div class="reward-grid">
+                <div class="reward-card special">
+                    <div class="reward-name">特等奖</div>
+                    <div class="reward-probability">概率: 0.1%</div>
+                    <div class="reward-amount">10000 MAO / 100000 PI</div>
+                    <div class="reward-multiplier">100倍盈利</div>
+                </div>
+                
+                <div class="reward-card first">
+                    <div class="reward-name">一等奖</div>
+                    <div class="reward-probability">概率: 0.5%</div>
+                    <div class="reward-amount">2000 MAO / 20000 PI</div>
+                    <div class="reward-multiplier">20倍盈利</div>
+                </div>
+                
+                <div class="reward-card second">
+                    <div class="reward-name">二等奖</div>
+                    <div class="reward-probability">概率: 2%</div>
+                    <div class="reward-amount">500 MAO / 5000 PI</div>
+                    <div class="reward-multiplier">5倍盈利</div>
+                </div>
+                
+                <div class="reward-card">
+                    <div class="reward-name">三等奖</div>
+                    <div class="reward-probability">概率: 5%</div>
+                    <div class="reward-amount">200 MAO / 2000 PI</div>
+                    <div class="reward-multiplier">2倍盈利</div>
+                </div>
+                
+                <div class="reward-card">
+                    <div class="reward-name">四等奖</div>
+                    <div class="reward-probability">概率: 15%</div>
+                    <div class="reward-amount">110 MAO / 1100 PI</div>
+                    <div class="reward-multiplier">1.1倍盈利</div>
+                </div>
+                
+                <div class="reward-card">
+                    <div class="reward-name">安慰奖</div>
+                    <div class="reward-probability">概率: 27.4%</div>
+                    <div class="reward-amount">101 MAO / 1010 PI</div>
+                    <div class="reward-multiplier">1.01倍盈利</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="history-section">
+            <h3>📜 游戏历史</h3>
+            <div id="gameHistory"></div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏配置
+        const rewardLevels = [
+            { name: "特等奖", probability: 0.1, maoReward: 10000, piReward: 100000, multiplier: 100 },
+            { name: "一等奖", probability: 0.5, maoReward: 2000, piReward: 20000, multiplier: 20 },
+            { name: "二等奖", probability: 2, maoReward: 500, piReward: 5000, multiplier: 5 },
+            { name: "三等奖", probability: 5, maoReward: 200, piReward: 2000, multiplier: 2 },
+            { name: "四等奖", probability: 15, maoReward: 110, piReward: 1100, multiplier: 1.1 },
+            { name: "安慰奖", probability: 27.4, maoReward: 101, piReward: 1010, multiplier: 1.01 }
+        ];
+        
+        const gameCosts = {
+            MAO: 100,
+            PI: 1000
+        };
+        
+        let currentToken = 'MAO';
+        let totalGames = 0;
+        let totalWins = 0;
+        let totalProfit = 0;
+        let isSpinning = false;
+        
+        function selectToken(token) {
+            currentToken = token;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.token-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 更新显示信息
+            document.getElementById('currentToken').textContent = token;
+            document.getElementById('gameCost').textContent = `${gameCosts[token]} ${token}`;
+        }
+        
+        function playGame() {
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            const playBtn = document.getElementById('playBtn');
+            playBtn.disabled = true;
+            playBtn.textContent = '🎰 转盘中...';
+            
+            // 隐藏之前的奖励显示
+            document.getElementById('rewardDisplay').style.display = 'none';
+            
+            // 开始转盘动画
+            const wheel = document.getElementById('wheel');
+            wheel.classList.add('spinning');
+            
+            // 模拟游戏结果
+            setTimeout(() => {
+                const result = simulateGame();
+                
+                // 停止转盘动画
+                wheel.classList.remove('spinning');
+                
+                // 显示结果
+                showResult(result);
+                
+                // 更新统计
+                updateStats(result);
+                
+                // 添加到历史记录
+                addToHistory(result);
+                
+                // 重置按钮
+                isSpinning = false;
+                playBtn.disabled = false;
+                playBtn.textContent = '🎯 开始游戏';
+            }, 3000);
+        }
+        
+        function simulateGame() {
+            const gameCost = gameCosts[currentToken];
+            const random = Math.random() * 100;
+            let cumulativeProb = 0;
+            
+            // 50%中奖率
+            if (random < 50) {
+                for (let level of rewardLevels) {
+                    cumulativeProb += level.probability;
+                    if (random < cumulativeProb) {
+                        const reward = currentToken === 'MAO' ? level.maoReward : level.piReward;
+                        const profit = reward - gameCost;
+                        return {
+                            isWin: true,
+                            level: level.name,
+                            reward: reward,
+                            profit: profit,
+                            multiplier: level.multiplier
+                        };
+                    }
+                }
+            }
+            
+            return {
+                isWin: false,
+                level: "未中奖",
+                reward: 0,
+                profit: -gameCost,
+                multiplier: 0
+            };
+        }
+        
+        function showResult(result) {
+            const rewardDisplay = document.getElementById('rewardDisplay');
+            const rewardAmount = document.getElementById('rewardAmount');
+            const rewardLevel = document.getElementById('rewardLevel');
+            
+            if (result.isWin) {
+                rewardAmount.textContent = `+${result.reward} ${currentToken}`;
+                rewardLevel.textContent = `🎉 ${result.level} (${result.multiplier}倍)`;
+                rewardAmount.style.color = '#27ae60';
+            } else {
+                rewardAmount.textContent = `-${gameCosts[currentToken]} ${currentToken}`;
+                rewardLevel.textContent = `❌ ${result.level}`;
+                rewardAmount.style.color = '#e74c3c';
+            }
+            
+            rewardDisplay.style.display = 'block';
+        }
+        
+        function updateStats(result) {
+            totalGames++;
+            if (result.isWin) {
+                totalWins++;
+                totalProfit += result.profit;
+            } else {
+                totalProfit += result.profit;
+            }
+            
+            document.getElementById('totalGames').textContent = totalGames;
+            document.getElementById('totalWins').textContent = totalWins;
+            document.getElementById('winRate').textContent = totalGames > 0 ? `${((totalWins / totalGames) * 100).toFixed(1)}%` : '0%';
+            document.getElementById('totalProfit').textContent = totalProfit;
+        }
+        
+        function addToHistory(result) {
+            const historyContainer = document.getElementById('gameHistory');
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            
+            const profitClass = result.profit >= 0 ? 'profit' : 'loss';
+            const profitText = result.profit >= 0 ? `+${result.profit}` : result.profit;
+            
+            historyItem.innerHTML = `
+                <div>
+                    <strong>${currentToken}游戏</strong> - ${new Date().toLocaleTimeString()}
+                </div>
+                <div>
+                    ${result.isWin ? 
+                        `<span class="profit">🎉 ${result.level} - ${result.reward} ${currentToken}</span>` : 
+                        `<span class="loss">❌ ${result.level}</span>`
+                    }
+                </div>
+                <div class="${profitClass}">
+                    ${profitText} ${currentToken}
+                </div>
+            `;
+            
+            historyContainer.insertBefore(historyItem, historyContainer.firstChild);
+            
+            // 限制历史记录数量
+            if (historyContainer.children.length > 10) {
+                historyContainer.removeChild(historyContainer.lastChild);
+            }
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎮 MAO游戏界面已加载');
+            console.log('🎯 全中奖盈利系统已准备就绪');
+        });
+    </script>
+</body>
+</html> 

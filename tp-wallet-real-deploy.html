@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎒 TP钱包真实部署工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .warning {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        .tp-section {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border-left: 5px solid #FF6B6B;
+        }
+        .tp-btn {
+            background: linear-gradient(45deg, #FF6B6B, #FF5252);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+            width: 100%;
+            margin: 20px 0;
+        }
+        .tp-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.5);
+        }
+        .tp-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.waiting {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+        }
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid #f44336;
+        }
+        .wallet-info {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+            border: 2px solid #4ECDC4;
+        }
+        .copy-btn {
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .real-deploy {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎒 TP钱包真实部署工具</h1>
+        
+        <div class="warning">
+            <h3>⚠️ 重要说明</h3>
+            <p><strong>这次是真实的区块链部署！需要：</strong></p>
+            <ul>
+                <li>🔗 真正连接您的TP钱包</li>
+                <li>💰 实际的ALV代币支付Gas费</li>
+                <li>✅ 每个步骤都需要您在钱包中确认</li>
+                <li>⏳ 部署时间约5-10分钟</li>
+            </ul>
+        </div>
+
+        <div class="tp-section">
+            <h2>🔗 连接TP钱包</h2>
+            <p>请确保您在TP钱包内打开此页面</p>
+            
+            <button class="tp-btn" onclick="connectRealWallet()">
+                🎒 连接TP钱包（真实）
+            </button>
+            
+            <div id="connectStatus" class="status waiting">
+                📋 等待连接...
+            </div>
+            
+            <div id="walletInfo" style="display:none;">
+                <h4>📱 钱包信息:</h4>
+                <div class="wallet-info" id="walletDetails"></div>
+            </div>
+        </div>
+
+        <div class="tp-section" id="deploySection" style="display:none;">
+            <h2>🚀 部署合约</h2>
+            <div class="warning">
+                <p><strong>⚠️ 由于缺少实际编译的合约字节码，无法进行真实部署。</strong></p>
+                <p>需要先完成以下步骤：</p>
+                <ol>
+                    <li>编译 UltraSecureWheelGame.sol 合约</li>
+                    <li>获取合约的字节码</li>
+                    <li>更新部署工具</li>
+                </ol>
+            </div>
+            
+            <button class="tp-btn" onclick="explainRealDeploy()">
+                📖 了解真实部署流程
+            </button>
+            
+            <div id="deployStatus" class="status waiting">
+                📋 等待部署...
+            </div>
+        </div>
+
+        <div id="explanationSection" style="display:none;">
+            <div class="real-deploy">
+                <h3>🎯 真实部署需要的步骤：</h3>
+                <ol>
+                    <li><strong>编译合约：</strong>使用Remix IDE编译UltraSecureWheelGame.sol</li>
+                    <li><strong>获取字节码：</strong>从编译结果中复制字节码</li>
+                    <li><strong>配置参数：</strong>设置管理员地址和代币地址</li>
+                    <li><strong>连接钱包：</strong>确保TP钱包连接到AlveyChain</li>
+                    <li><strong>发送交易：</strong>使用ethers.js发送部署交易</li>
+                    <li><strong>等待确认：</strong>等待区块链确认交易</li>
+                </ol>
+                
+                <h3>💰 费用说明：</h3>
+                <ul>
+                    <li>预计Gas费用：0.05-0.2 ALV</li>
+                    <li>部署时间：3-10分钟</li>
+                    <li>需要钱包确认：1次</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let provider = null;
+        let signer = null;
+
+        async function connectRealWallet() {
+            try {
+                document.getElementById('connectStatus').textContent = '🔍 检测Web3环境...';
+                document.getElementById('connectStatus').className = 'status waiting';
+                
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('未检测到Web3钱包，请在TP钱包内打开此页面');
+                }
+
+                document.getElementById('connectStatus').textContent = '🔗 请求钱包连接...';
+                
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('钱包连接被拒绝');
+                }
+
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                const address = accounts[0];
+
+                // 获取网络信息
+                const network = await provider.getNetwork();
+                const balance = await provider.getBalance(address);
+                const balanceInEth = ethers.utils.formatEther(balance);
+
+                // 显示钱包信息
+                document.getElementById('walletDetails').innerHTML = `
+                    地址: ${address}<br>
+                    网络: ${network.name} (${network.chainId})<br>
+                    余额: ${parseFloat(balanceInEth).toFixed(4)} ${network.chainId === 3797 ? 'ALV' : 'ETH'}
+                `;
+                
+                document.getElementById('walletInfo').style.display = 'block';
+                document.getElementById('connectStatus').textContent = '✅ 钱包连接成功！';
+                document.getElementById('connectStatus').className = 'status success';
+
+                // 检查网络
+                if (network.chainId !== 3797) {
+                    document.getElementById('connectStatus').textContent = '⚠️ 请切换到AlveyChain网络 (链ID: 3797)';
+                    document.getElementById('connectStatus').className = 'status error';
+                    return;
+                }
+
+                // 显示部署区域
+                document.getElementById('deploySection').style.display = 'block';
+
+            } catch (error) {
+                console.error('连接失败:', error);
+                document.getElementById('connectStatus').textContent = `❌ 连接失败: ${error.message}`;
+                document.getElementById('connectStatus').className = 'status error';
+            }
+        }
+
+        function explainRealDeploy() {
+            document.getElementById('explanationSection').style.display = 'block';
+            document.getElementById('deployStatus').textContent = '📖 请查看下方的真实部署说明';
+            document.getElementById('deployStatus').className = 'status waiting';
+        }
+
+        // 页面加载完成后的初始化
+        window.addEventListener('load', function() {
+            console.log('🎒 TP钱包真实部署工具已准备就绪！');
+            
+            // 检测是否在TP钱包环境中
+            if (typeof window.ethereum !== 'undefined') {
+                console.log('✅ 检测到Web3环境');
+            } else {
+                console.log('⚠️ 未检测到Web3环境，请在TP钱包中打开');
+            }
+        });
+    </script>
+</body>
+</html> 

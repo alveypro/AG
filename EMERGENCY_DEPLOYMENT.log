@@ -1,0 +1,14 @@
+🚨 紧急安全部署记录
+开始时间: Tue Jul 22 00:03:10 CST 2025
+恶意地址: 0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7
+信任地址: 0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28
+部署原因: 发现恶意Owner控制
+使用真实钱包: 是
+
+步骤6: 完成部署准备
+新合约代码: UltraSecureWheelGame.sol
+新前端文件: wheel-game-ULTRA-SECURE.html
+紧急通知页面: EMERGENCY_NOTICE.html -> index.html
+配置文件: new-secure-config.json
+部署指南: URGENT_DEPLOYMENT_GUIDE.md
+完成时间: Tue Jul 22 00:03:10 CST 2025

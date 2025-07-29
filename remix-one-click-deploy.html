@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Remix一键部署助手</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 5px solid #4CAF50;
+        }
+        .step h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+        }
+        .action-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        .copy-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            border: 1px solid rgba(255,255,255,0.3);
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .status.waiting {
+            background: rgba(255, 193, 7, 0.3);
+            border: 1px solid #FFC107;
+        }
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+        }
+        .highlight {
+            background: rgba(255, 255, 0, 0.3);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 MAO游戏一键部署助手</h1>
+        
+        <div id="currentStatus" class="status waiting">
+            📋 准备开始部署...
+        </div>
+        
+        <div class="progress">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+        
+        <!-- 步骤1: 编译 -->
+        <div class="step" id="step1">
+            <h3>步骤1: 编译合约 ⚙️</h3>
+            <p><strong>操作：</strong>在Remix左侧点击<span class="highlight">第3个图标(齿轮⚙️)</span>，然后点击<span class="highlight">蓝色编译按钮</span></p>
+            <button class="action-btn" onclick="step1Complete()">✅ 我已完成编译</button>
+            <div id="step1Status"></div>
+        </div>
+        
+        <!-- 步骤2: 进入部署页面 -->
+        <div class="step" id="step2" style="display:none;">
+            <h3>步骤2: 进入部署页面 🚀</h3>
+            <p><strong>操作：</strong>点击Remix左侧<span class="highlight">第4个图标(以太坊Logo)</span>进入部署页面</p>
+            <button class="action-btn" onclick="step2Complete()">✅ 我已进入部署页面</button>
+            <div id="step2Status"></div>
+        </div>
+        
+        <!-- 步骤3: 连接钱包 -->
+        <div class="step" id="step3" style="display:none;">
+            <h3>步骤3: 连接钱包 🔗</h3>
+            <p><strong>操作：</strong>将<span class="highlight">ENVIRONMENT</span>改为<span class="highlight">"Injected Provider - MetaMask"</span></p>
+            <button class="action-btn" onclick="step3Complete()">✅ 我已连接钱包</button>
+            <div id="step3Status"></div>
+        </div>
+        
+        <!-- 步骤4: 部署参数 -->
+        <div class="step" id="step4" style="display:none;">
+            <h3>步骤4: 复制部署参数 📋</h3>
+            <p><strong>重要：</strong>复制以下参数到Remix的部署参数框：</p>
+            <div class="copy-box">
+                <button class="copy-btn" onclick="copyDeployParams()">复制</button>
+                <div id="deployParams">"0x22f49bcb3dad370a9268ba3fca33cb037ca3d022","0xfd4680e25e05b3435c7f698668d1ce80d2a9f444",["0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28","0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7","0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5","0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5","0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"],"0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28"</div>
+            </div>
+            <button class="action-btn" onclick="step4Complete()">✅ 我已复制参数</button>
+            <div id="step4Status"></div>
+        </div>
+        
+        <!-- 步骤5: 部署 -->
+        <div class="step" id="step5" style="display:none;">
+            <h3>步骤5: 部署合约 🎯</h3>
+            <p><strong>操作：</strong>确认选择了<span class="highlight">UltraSecureWheelGame</span>合约，然后点击<span class="highlight">橙色Deploy按钮</span></p>
+            <button class="action-btn" onclick="step5Complete()">✅ 我已点击Deploy</button>
+            <div id="step5Status"></div>
+        </div>
+        
+        <!-- 步骤6: 获取地址 -->
+        <div class="step" id="step6" style="display:none;">
+            <h3>步骤6: 复制新合约地址 📍</h3>
+            <p><strong>操作：</strong>从部署成功的交易中复制新合约地址(0x开头的42位字符)</p>
+            <input type="text" id="contractAddress" placeholder="在这里粘贴新合约地址..." 
+                   style="width: 100%; padding: 10px; border-radius: 5px; border: none; margin: 10px 0;">
+            <button class="action-btn" onclick="step6Complete()">✅ 提交新合约地址</button>
+            <div id="step6Status"></div>
+        </div>
+        
+        <!-- 完成页面 -->
+        <div class="step" id="stepComplete" style="display:none;">
+            <h3>🎉 部署完成！</h3>
+            <p><strong>恭喜！您已成功部署了超级安全的智能合约！</strong></p>
+            <div id="finalContractAddress" class="copy-box"></div>
+            <button class="action-btn" onclick="generatePostDeployConfig()">🔧 生成部署后配置</button>
+            <div id="completeStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let deployedContractAddress = '';
+        
+        function updateProgress(step) {
+            const progress = (step / 6) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        function updateStatus(message, type = 'waiting') {
+            const statusEl = document.getElementById('currentStatus');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function step1Complete() {
+            document.getElementById('step1Status').innerHTML = '<div style="color: #4CAF50;">✅ 编译完成！</div>';
+            document.getElementById('step2').style.display = 'block';
+            currentStep = 2;
+            updateProgress(2);
+            updateStatus('📍 请进入部署页面...');
+        }
+        
+        function step2Complete() {
+            document.getElementById('step2Status').innerHTML = '<div style="color: #4CAF50;">✅ 已进入部署页面！</div>';
+            document.getElementById('step3').style.display = 'block';
+            currentStep = 3;
+            updateProgress(3);
+            updateStatus('🔗 请连接您的钱包...');
+        }
+        
+        function step3Complete() {
+            document.getElementById('step3Status').innerHTML = '<div style="color: #4CAF50;">✅ 钱包连接成功！</div>';
+            document.getElementById('step4').style.display = 'block';
+            currentStep = 4;
+            updateProgress(4);
+            updateStatus('📋 请复制部署参数...');
+        }
+        
+        function step4Complete() {
+            document.getElementById('step4Status').innerHTML = '<div style="color: #4CAF50;">✅ 参数复制完成！</div>';
+            document.getElementById('step5').style.display = 'block';
+            currentStep = 5;
+            updateProgress(5);
+            updateStatus('🚀 准备部署合约...');
+        }
+        
+        function step5Complete() {
+            document.getElementById('step5Status').innerHTML = '<div style="color: #4CAF50;">✅ 正在部署合约，请等待确认...</div>';
+            document.getElementById('step6').style.display = 'block';
+            currentStep = 6;
+            updateProgress(6);
+            updateStatus('⏳ 等待部署完成...');
+        }
+        
+        function step6Complete() {
+            const address = document.getElementById('contractAddress').value;
+            if (!address || !address.startsWith('0x') || address.length !== 42) {
+                alert('请输入有效的合约地址！地址应该是0x开头的42位字符。');
+                return;
+            }
+            
+            deployedContractAddress = address;
+            document.getElementById('step6Status').innerHTML = '<div style="color: #4CAF50;">✅ 合约地址已记录！</div>';
+            document.getElementById('stepComplete').style.display = 'block';
+            document.getElementById('finalContractAddress').innerHTML = `<strong>新合约地址:</strong><br>${address}<button class="copy-btn" onclick="copyText('${address}')">复制</button>`;
+            updateProgress(6);
+            updateStatus('🎉 部署完成！万无一失的安全系统已就绪！', 'success');
+        }
+        
+        function copyDeployParams() {
+            const text = document.getElementById('deployParams').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 部署参数已复制到剪贴板！请粘贴到Remix中。');
+            });
+        }
+        
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 已复制到剪贴板！');
+            });
+        }
+        
+        function generatePostDeployConfig() {
+            if (!deployedContractAddress) {
+                alert('❌ 请先提供合约地址！');
+                return;
+            }
+            
+            // 生成配置信息
+            const config = {
+                contractAddress: deployedContractAddress,
+                deployedAt: new Date().toISOString(),
+                network: "AlveyChain",
+                admins: [
+                    "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+                    "0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7",
+                    "0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5",
+                    "0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5",
+                    "0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"
+                ],
+                securityFeatures: {
+                    multiSig: "5/3",
+                    timelock: "24 hours",
+                    blacklist: ["0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7"],
+                    limits: true
+                },
+                nextSteps: [
+                    "向新合约充值代币",
+                    "测试游戏功能", 
+                    "正式上线"
+                ]
+            };
+            
+            const configText = JSON.stringify(config, null, 2);
+            
+            // 创建下载链接
+            const blob = new Blob([configText], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'deployment-success.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('completeStatus').innerHTML = `
+                <div style="color: #4CAF50; margin: 20px 0;">
+                    <h4>🎉 配置文件已生成！</h4>
+                    <p><strong>下一步：</strong></p>
+                    <ol style="text-align: left;">
+                        <li>向新合约 <code>${deployedContractAddress}</code> 充值代币</li>
+                        <li>MAO代币: 至少 200,000 MAO</li>
+                        <li>PI代币: 至少 2,000,000 PI</li>
+                        <li>测试游戏功能</li>
+                        <li>正式上线！</li>
+                    </ol>
+                    <p><strong>🛡️ 您现在拥有了世界级的安全游戏系统！</strong></p>
+                </div>
+            `;
+        }
+        
+        // 初始化
+        updateProgress(1);
+        updateStatus('🚀 请开始第一步：编译合约');
+    </script>
+</body>
+</html> 

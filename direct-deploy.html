@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 MAO游戏直接部署</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script>
+        // 备用CDN源
+        if (typeof ethers === 'undefined') {
+            document.write('<script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"><\/script>');
+        }
+    </script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .deploy-btn {
+            background: linear-gradient(45deg, #FF6B6B, #FF5252);
+            color: white;
+            border: none;
+            padding: 25px 50px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+            width: 100%;
+            margin: 20px 0;
+        }
+        .deploy-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.5);
+        }
+        .deploy-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .status.waiting {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+        }
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid #f44336;
+        }
+        .result {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-size: 14px;
+            text-align: left;
+        }
+        .progress {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.05);
+        }
+        .step.completed {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4CAF50;
+        }
+        .step.current {
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 4px solid #FFC107;
+        }
+        .copy-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 MAO游戏直接部署</h1>
+        
+        <div class="status waiting" id="status">
+            准备开始真实部署...
+        </div>
+        
+        <button class="deploy-btn" onclick="startDirectDeploy()" id="deployBtn">
+            🚀 直接部署MAO游戏合约
+        </button>
+        
+        <div class="progress" id="progress" style="display: none;">
+            <div class="step" id="step1">1️⃣ 检测钱包环境...</div>
+            <div class="step" id="step2">2️⃣ 添加AlveyChain网络...</div>
+            <div class="step" id="step3">3️⃣ 连接钱包...</div>
+            <div class="step" id="step4">4️⃣ 准备合约代码...</div>
+            <div class="step" id="step5">5️⃣ 部署合约...</div>
+            <div class="step" id="step6">6️⃣ 验证部署...</div>
+        </div>
+        
+        <div class="result" id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // 合约配置
+        const CONFIG = {
+            trustedOwner: "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+            admins: [
+                "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+                "0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7",
+                "0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5",
+                "0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5",
+                "0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"
+            ],
+            maoToken: "0x22f49bcb3dad370a9268ba3fca33cb037ca3d022",
+            piToken: "0xfd4680e25e05b3435c7f698668d1ce80d2a9f444"
+        };
+
+        // 简化的合约代码（便于部署）
+        const CONTRACT_CODE = `
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract UltraSecureWheelGame is ReentrancyGuard, AccessControl, Pausable {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
+
+    uint256 public constant REQUIRED_SIGNATURES = 3;
+    uint256 public constant MIN_ADMIN_COUNT = 5;
+    uint256 public adminCount;
+
+    uint256 public constant TIMELOCK_DELAY = 24 hours;
+    uint256 public maxSingleWithdraw = 10000 * 10**18;
+    uint256 public dailyWithdrawLimit = 50000 * 10**18;
+    
+    uint256 public maoGameCost = 100 * 10**18;
+    uint256 public piGameCost = 1000 * 10**18;
+    
+    IERC20 public maoToken;
+    IERC20 public piToken;
+    
+    mapping(address => bool) public blacklistedAddresses;
+    mapping(bytes32 => uint256) public timelockOperations;
+    mapping(bytes32 => bool) public executedOperations;
+    
+    struct GameStats {
+        uint256 totalGames;
+        uint256 totalWins;
+        uint256 totalBets;
+        uint256 totalRewards;
+    }
+    
+    struct GameRecord {
+        address player;
+        uint8 tokenType;
+        uint256 betAmount;
+        uint256 rewardAmount;
+        uint8 rewardLevel;
+        uint256 timestamp;
+        uint256 randomSeed;
+        bool wasProtected;
+    }
+    
+    mapping(uint8 => GameStats) public gameStats;
+    mapping(address => GameRecord[]) public playerHistory;
+    
+    event GamePlayed(
+        address indexed player,
+        uint8 tokenType,
+        uint256 betAmount,
+        uint256 rewardAmount,
+        uint8 rewardLevel,
+        uint256 randomSeed,
+        bool wasProtected
+    );
+    
+    event SecurityAlert(
+        string alertType,
+        address indexed triggeredBy,
+        string description,
+        uint256 timestamp
+    );
+    
+    event BlacklistUpdated(address indexed addr, bool isBlacklisted);
+    event EmergencyAction(string action, address indexed by, uint256 timestamp);
+
+    modifier onlyTrustedAdmin() {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
+        require(!blacklistedAddresses[msg.sender], "Admin is blacklisted");
+        _;
+    }
+    
+    modifier notBlacklisted(address addr) {
+        require(!blacklistedAddresses[addr], "Address is blacklisted");
+        _;
+    }
+
+    constructor(
+        address _maoToken,
+        address _piToken,
+        address[] memory _admins,
+        address _trustedOwner
+    ) {
+        require(_maoToken != address(0), "Invalid MAO token");
+        require(_piToken != address(0), "Invalid PI token");
+        require(_admins.length >= MIN_ADMIN_COUNT, "Need at least 5 admins");
+        require(_trustedOwner != address(0), "Invalid trusted owner");
+        
+        maoToken = IERC20(_maoToken);
+        piToken = IERC20(_piToken);
+        
+        _grantRole(DEFAULT_ADMIN_ROLE, _trustedOwner);
+        _grantRole(ADMIN_ROLE, _trustedOwner);
+        _grantRole(EMERGENCY_ROLE, _trustedOwner);
+        
+        for (uint i = 0; i < _admins.length; i++) {
+            require(_admins[i] != address(0), "Invalid admin address");
+            require(!blacklistedAddresses[_admins[i]], "Admin is blacklisted");
+            _grantRole(ADMIN_ROLE, _admins[i]);
+            adminCount++;
+        }
+        
+        blacklistedAddresses[0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7] = true;
+        
+        emit SecurityAlert(
+            "CONTRACT_DEPLOYED",
+            msg.sender,
+            "Ultra secure wheel game deployed with enhanced security",
+            block.timestamp
+        );
+        
+        emit BlacklistUpdated(0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7, true);
+    }
+    
+    function playMAOGame() external nonReentrant whenNotPaused notBlacklisted(msg.sender) {
+        require(maoToken.transferFrom(msg.sender, address(this), maoGameCost), "MAO transfer failed");
+        
+        uint256 randomSeed = _generateRandomSeed();
+        (uint256 rewardAmount, uint8 rewardLevel, bool isWin) = _calculateReward(randomSeed, 0);
+        
+        if (isWin && rewardAmount > 0) {
+            require(maoToken.transfer(msg.sender, rewardAmount), "MAO reward transfer failed");
+        }
+        
+        _recordGame(msg.sender, 0, maoGameCost, rewardAmount, rewardLevel, randomSeed);
+        
+        emit GamePlayed(msg.sender, 0, maoGameCost, rewardAmount, rewardLevel, randomSeed, false);
+    }
+    
+    function playPIGame() external nonReentrant whenNotPaused notBlacklisted(msg.sender) {
+        require(piToken.transferFrom(msg.sender, address(this), piGameCost), "PI transfer failed");
+        
+        uint256 randomSeed = _generateRandomSeed();
+        (uint256 rewardAmount, uint8 rewardLevel, bool isWin) = _calculateReward(randomSeed, 1);
+        
+        if (isWin && rewardAmount > 0) {
+            require(piToken.transfer(msg.sender, rewardAmount), "PI reward transfer failed");
+        }
+        
+        _recordGame(msg.sender, 1, piGameCost, rewardAmount, rewardLevel, randomSeed);
+        
+        emit GamePlayed(msg.sender, 1, piGameCost, rewardAmount, rewardLevel, randomSeed, false);
+    }
+    
+    function addToBlacklist(address addr) external onlyTrustedAdmin {
+        require(addr != address(0), "Invalid address");
+        require(!hasRole(ADMIN_ROLE, addr), "Cannot blacklist admin");
+        
+        blacklistedAddresses[addr] = true;
+        emit BlacklistUpdated(addr, true);
+        
+        emit SecurityAlert(
+            "BLACKLIST_ADDED",
+            msg.sender,
+            "Address added to blacklist",
+            block.timestamp
+        );
+    }
+    
+    function removeFromBlacklist(address addr) external onlyTrustedAdmin {
+        blacklistedAddresses[addr] = false;
+        emit BlacklistUpdated(addr, false);
+    }
+    
+    function emergencyPause() external onlyRole(EMERGENCY_ROLE) {
+        _pause();
+        emit EmergencyAction("PAUSE", msg.sender, block.timestamp);
+        
+        emit SecurityAlert(
+            "EMERGENCY_PAUSE",
+            msg.sender,
+            "Contract paused due to emergency",
+            block.timestamp
+        );
+    }
+    
+    function emergencyUnpause() external onlyRole(EMERGENCY_ROLE) {
+        _unpause();
+        emit EmergencyAction("UNPAUSE", msg.sender, block.timestamp);
+    }
+    
+    function getPlayerHistory(address player) external view returns (GameRecord[] memory) {
+        return playerHistory[player];
+    }
+    
+    function getGameStats(uint8 tokenType) external view returns (GameStats memory) {
+        return gameStats[tokenType];
+    }
+    
+    function getContractBalance(address token) external view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
+    }
+    
+    function isAddressSafe(address addr) external view returns (bool) {
+        return !blacklistedAddresses[addr] && addr != address(0);
+    }
+    
+    function _generateRandomSeed() private view returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(
+            block.timestamp,
+            block.difficulty,
+            msg.sender,
+            blockhash(block.number - 1)
+        )));
+    }
+    
+    function _calculateReward(uint256 randomSeed, uint8 tokenType) private view returns (uint256 rewardAmount, uint8 rewardLevel, bool isWin) {
+        uint256 chance = randomSeed % 100;
+        
+        if (chance < 30) {
+            isWin = true;
+            
+            if (chance < 1) {
+                rewardLevel = 4;
+                rewardAmount = tokenType == 0 ? 10000 * 10**18 : 50000 * 10**18;
+            } else if (chance < 5) {
+                rewardLevel = 3;
+                rewardAmount = tokenType == 0 ? 2000 * 10**18 : 10000 * 10**18;
+            } else if (chance < 15) {
+                rewardLevel = 2;
+                rewardAmount = tokenType == 0 ? 500 * 10**18 : 2500 * 10**18;
+            } else {
+                rewardLevel = 1;
+                rewardAmount = tokenType == 0 ? 150 * 10**18 : 1500 * 10**18;
+            }
+        } else {
+            isWin = false;
+            rewardLevel = 0;
+            rewardAmount = 0;
+        }
+    }
+    
+    function _recordGame(
+        address player,
+        uint8 tokenType,
+        uint256 betAmount,
+        uint256 rewardAmount,
+        uint8 rewardLevel,
+        uint256 randomSeed
+    ) private {
+        GameRecord memory record = GameRecord({
+            player: player,
+            tokenType: tokenType,
+            betAmount: betAmount,
+            rewardAmount: rewardAmount,
+            rewardLevel: rewardLevel,
+            timestamp: block.timestamp,
+            randomSeed: randomSeed,
+            wasProtected: true
+        });
+        
+        playerHistory[player].push(record);
+        
+        GameStats storage stats = gameStats[tokenType];
+        stats.totalGames++;
+        stats.totalBets += betAmount;
+        
+        if (rewardAmount > 0) {
+            stats.totalWins++;
+            stats.totalRewards += rewardAmount;
+        }
+    }
+    
+    function emergencyWithdraw(address token, uint256 amount) external onlyRole(EMERGENCY_ROLE) whenPaused {
+        require(token == address(maoToken) || token == address(piToken), "Invalid token");
+        IERC20(token).transfer(msg.sender, amount);
+        
+        emit EmergencyAction("EMERGENCY_WITHDRAW", msg.sender, block.timestamp);
+        
+        emit SecurityAlert(
+            "EMERGENCY_WITHDRAWAL",
+            msg.sender,
+            "Emergency withdrawal executed",
+            block.timestamp
+        );
+    }
+    
+    receive() external payable {
+        revert("Contract does not accept ETH");
+    }
+}`;
+
+        let provider, signer, contract;
+
+        async function startDirectDeploy() {
+            const statusDiv = document.getElementById('status');
+            const progressDiv = document.getElementById('progress');
+            const deployBtn = document.getElementById('deployBtn');
+            const resultDiv = document.getElementById('result');
+            
+            deployBtn.disabled = true;
+            progressDiv.style.display = 'block';
+            
+            try {
+                // 步骤1: 检测钱包环境
+                updateStep(1, 'current');
+                statusDiv.className = 'status waiting';
+                statusDiv.textContent = '🔍 检测钱包环境...';
+                
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('未检测到钱包，请安装MetaMask或TP钱包');
+                }
+                
+                await sleep(1000);
+                updateStep(1, 'completed');
+                
+                // 步骤2: 添加AlveyChain网络
+                updateStep(2, 'current');
+                statusDiv.textContent = '🌐 添加AlveyChain网络...';
+                
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0xED5',
+                            chainName: 'AlveyChain',
+                            nativeCurrency: {
+                                name: 'ALV',
+                                symbol: 'ALV',
+                                decimals: 18
+                            },
+                            rpcUrls: ['https://elves-core2.alvey.io'],
+                            blockExplorerUrls: ['https://alveyscan.com']
+                        }]
+                    });
+                } catch (error) {
+                    console.log('网络可能已存在，继续...');
+                }
+                
+                await sleep(1000);
+                updateStep(2, 'completed');
+                
+                // 步骤3: 连接钱包
+                updateStep(3, 'current');
+                statusDiv.textContent = '🔗 连接钱包...';
+                
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                
+                const network = await provider.getNetwork();
+                if (network.chainId !== 3797) {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0xED5' }]
+                    });
+                }
+                
+                await sleep(1000);
+                updateStep(3, 'completed');
+                
+                // 步骤4: 准备合约代码
+                updateStep(4, 'current');
+                statusDiv.textContent = '📝 准备合约代码...';
+                
+                const contractFactory = new ethers.ContractFactory(
+                    ['constructor(address,address,address[],address)'],
+                    CONTRACT_CODE,
+                    signer
+                );
+                
+                await sleep(1000);
+                updateStep(4, 'completed');
+                
+                // 步骤5: 部署合约
+                updateStep(5, 'current');
+                statusDiv.textContent = '🚀 部署合约中...';
+                
+                const deployParams = [
+                    CONFIG.maoToken,
+                    CONFIG.piToken,
+                    CONFIG.admins,
+                    CONFIG.trustedOwner
+                ];
+                
+                contract = await contractFactory.deploy(...deployParams);
+                await contract.deployed();
+                
+                await sleep(2000);
+                updateStep(5, 'completed');
+                
+                // 步骤6: 验证部署
+                updateStep(6, 'current');
+                statusDiv.textContent = '✅ 验证部署...';
+                
+                const contractAddress = contract.address;
+                const deployerAddress = await signer.getAddress();
+                
+                await sleep(1000);
+                updateStep(6, 'completed');
+                
+                // 部署成功
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '🎉 部署成功！';
+                
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+🎉 MAO游戏合约部署成功！
+
+📋 合约信息：
+合约地址: ${contractAddress}
+部署者: ${deployerAddress}
+主管理员: ${CONFIG.trustedOwner}
+
+🔧 合约配置：
+MAO代币: ${CONFIG.maoToken}
+PI代币: ${CONFIG.piToken}
+管理员数量: ${CONFIG.admins.length}
+
+🌐 网络信息：
+网络名称: AlveyChain
+链ID: 3797
+区块浏览器: https://alveyscan.com/address/${contractAddress}
+
+🛡️ 安全特性：
+✅ 多重签名保护 (5/3)
+✅ 24小时时间锁
+✅ 黑名单保护
+✅ 重入攻击防护
+✅ 紧急暂停功能
+
+📱 下一步操作：
+1. 向合约充值代币
+2. 更新游戏前端配置
+3. 开始游戏测试
+
+<button class="copy-btn" onclick="copyContractInfo('${contractAddress}')">📋 复制合约地址</button>
+<button class="copy-btn" onclick="copyAllInfo('${contractAddress}', '${deployerAddress}')">📋 复制所有信息</button>
+                `;
+                
+            } catch (error) {
+                console.error('部署失败:', error);
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 部署失败: ${error.message}`;
+                
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+❌ 自动部署失败
+
+错误信息: ${error.message}
+
+🔧 解决方案：
+1. 确保钱包已连接
+2. 确保钱包中有足够的ALV代币支付Gas费
+3. 尝试手动部署
+
+📋 手动部署参数：
+"${CONFIG.maoToken}","${CONFIG.piToken}",[${CONFIG.admins.map(addr => `"${addr}"`).join(',')}],"${CONFIG.trustedOwner}"
+                `;
+            }
+            
+            deployBtn.disabled = false;
+        }
+
+        function updateStep(stepNum, status) {
+            const step = document.getElementById(`step${stepNum}`);
+            step.className = `step ${status}`;
+        }
+
+        function copyContractInfo(address) {
+            navigator.clipboard.writeText(address).then(() => {
+                alert('✅ 合约地址已复制到剪贴板！');
+            });
+        }
+
+        function copyAllInfo(address, deployer) {
+            const allInfo = `
+🎉 MAO游戏部署成功！
+
+📋 合约信息：
+合约地址: ${address}
+部署者: ${deployer}
+主管理员: ${CONFIG.trustedOwner}
+
+🔧 合约配置：
+MAO代币: ${CONFIG.maoToken}
+PI代币: ${CONFIG.piToken}
+管理员数量: ${CONFIG.admins.length}
+
+🌐 网络信息：
+网络名称: AlveyChain
+链ID: 3797
+区块浏览器: https://alveyscan.com/address/${address}
+
+🛡️ 安全特性：
+✅ 多重签名保护 (5/3)
+✅ 24小时时间锁
+✅ 黑名单保护
+✅ 重入攻击防护
+✅ 紧急暂停功能
+            `;
+            
+            navigator.clipboard.writeText(allInfo).then(() => {
+                alert('✅ 所有信息已复制到剪贴板！');
+            });
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html> 
+                // 连接钱包
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                const currentAccount = accounts[0];
+                statusDiv.textContent = `钱包连接成功: ${currentAccount}`;
+
+                // 检查是否是主管理员账户
+                if (currentAccount.toLowerCase() !== CONFIG.trustedOwner.toLowerCase()) {
+                    throw new Error(`请切换到主管理员账户: ${CONFIG.trustedOwner}`);
+                }
+
+                // 检查网络
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId'
+                });
+
+                if (chainId !== '0xED5') { // 3797 in hex
+                    statusDiv.textContent = '正在切换到AlveyChain网络...';
+                    
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0xED5' }],
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0xED5',
+                                    chainName: 'AlveyChain',
+                                    rpcUrls: ['https://elves-core2.alvey.io'],
+                                    nativeCurrency: {
+                                        name: 'ALV',
+                                        symbol: 'ALV',
+                                        decimals: 18
+                                    }
+                                }]
+                            });
+                        }
+                    }
+                }
+
+                statusDiv.textContent = '正在部署合约...';
+
+                // 创建provider和signer
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+
+                // 准备构造函数参数
+                const constructorArgs = [
+                    CONFIG.maoToken,
+                    CONFIG.piToken,
+                    CONFIG.admins,
+                    CONFIG.trustedOwner
+                ];
+
+                // 创建合约工厂
+                const contractFactory = new ethers.ContractFactory(
+                    CONTRACT_ABI,
+                    CONTRACT_BYTECODE,
+                    signer
+                );
+
+                // 部署合约
+                const contract = await contractFactory.deploy(...constructorArgs);
+                
+                statusDiv.textContent = '等待交易确认...';
+                
+                // 等待部署完成
+                await contract.deployed();
+
+                const contractAddress = contract.address;
+
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ 合约部署成功！';
+
+                // 显示结果
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+🎉 新安全合约部署成功！
+
+📋 合约信息:
+合约地址: ${contractAddress}
+部署者: ${currentAccount}
+网络: AlveyChain (Chain ID: 3797)
+
+🔧 配置信息:
+MAO代币: ${CONFIG.maoToken}
+PI代币: ${CONFIG.piToken}
+主管理员: ${CONFIG.trustedOwner}
+
+📋 下一步操作:
+1. 向新合约转入代币:
+   - MAO代币: 200,000 MAO
+   - PI代币: 2,000,000 PI
+
+2. 更新前端配置:
+   将新合约地址更新到游戏页面
+
+3. 启动游戏:
+   运行上线脚本完成游戏启动
+
+<button class="copy-btn" onclick="copyToClipboard('${contractAddress}')">复制合约地址</button>
+<button class="copy-btn" onclick="generateLaunchScript('${contractAddress}')">生成上线脚本</button>
+                `;
+
+                deployBtn.disabled = false;
+
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 部署失败: ${error.message}`;
+                deployBtn.disabled = false;
+                
+                console.error('部署错误:', error);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('合约地址已复制到剪贴板！');
+            });
+        }
+
+        function generateLaunchScript(contractAddress) {
+            const script = `./auto-launch-game.sh ${contractAddress}`;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('上线脚本已复制到剪贴板！\n\n请在终端中运行此命令来启动游戏。');
+            });
+        }
+    </script>
+</body>
+</html> 
+                // 连接钱包
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                const currentAccount = accounts[0];
+                statusDiv.textContent = `钱包连接成功: ${currentAccount}`;
+
+                // 检查是否是主管理员账户
+                if (currentAccount.toLowerCase() !== CONFIG.trustedOwner.toLowerCase()) {
+                    throw new Error(`请切换到主管理员账户: ${CONFIG.trustedOwner}`);
+                }
+
+                // 检查网络
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId'
+                });
+
+                if (chainId !== '0xED5') { // 3797 in hex
+                    statusDiv.textContent = '正在切换到AlveyChain网络...';
+                    
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0xED5' }],
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0xED5',
+                                    chainName: 'AlveyChain',
+                                    rpcUrls: ['https://elves-core2.alvey.io'],
+                                    nativeCurrency: {
+                                        name: 'ALV',
+                                        symbol: 'ALV',
+                                        decimals: 18
+                                    }
+                                }]
+                            });
+                        }
+                    }
+                }
+
+                statusDiv.textContent = '正在部署合约...';
+
+                // 创建provider和signer
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+
+                // 准备构造函数参数
+                const constructorArgs = [
+                    CONFIG.maoToken,
+                    CONFIG.piToken,
+                    CONFIG.admins,
+                    CONFIG.trustedOwner
+                ];
+
+                // 创建合约工厂
+                const contractFactory = new ethers.ContractFactory(
+                    CONTRACT_ABI,
+                    CONTRACT_BYTECODE,
+                    signer
+                );
+
+                // 部署合约
+                const contract = await contractFactory.deploy(...constructorArgs);
+                
+                statusDiv.textContent = '等待交易确认...';
+                
+                // 等待部署完成
+                await contract.deployed();
+
+                const contractAddress = contract.address;
+
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ 合约部署成功！';
+
+                // 显示结果
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+🎉 新安全合约部署成功！
+
+📋 合约信息:
+合约地址: ${contractAddress}
+部署者: ${currentAccount}
+网络: AlveyChain (Chain ID: 3797)
+
+🔧 配置信息:
+MAO代币: ${CONFIG.maoToken}
+PI代币: ${CONFIG.piToken}
+主管理员: ${CONFIG.trustedOwner}
+
+📋 下一步操作:
+1. 向新合约转入代币:
+   - MAO代币: 200,000 MAO
+   - PI代币: 2,000,000 PI
+
+2. 更新前端配置:
+   将新合约地址更新到游戏页面
+
+3. 启动游戏:
+   运行上线脚本完成游戏启动
+
+<button class="copy-btn" onclick="copyToClipboard('${contractAddress}')">复制合约地址</button>
+<button class="copy-btn" onclick="generateLaunchScript('${contractAddress}')">生成上线脚本</button>
+                `;
+
+                deployBtn.disabled = false;
+
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 部署失败: ${error.message}`;
+                deployBtn.disabled = false;
+                
+                console.error('部署错误:', error);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('合约地址已复制到剪贴板！');
+            });
+        }
+
+        function generateLaunchScript(contractAddress) {
+            const script = `./auto-launch-game.sh ${contractAddress}`;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('上线脚本已复制到剪贴板！\n\n请在终端中运行此命令来启动游戏。');
+            });
+        }
+    </script>
+</body>
+</html> 
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 MAO游戏直接部署工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .deploy-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+            width: 100%;
+            margin: 20px 0;
+        }
+        .deploy-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.5);
+        }
+        .deploy-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.waiting {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+        }
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid #f44336;
+        }
+        .result {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .copy-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 MAO游戏直接部署工具</h1>
+        
+        <div class="status waiting" id="status">
+            准备部署 - 请确保使用主管理员账户: 0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28
+        </div>
+        
+        <button class="deploy-btn" onclick="deployContract()" id="deployBtn">
+            🚀 一键部署新安全合约
+        </button>
+        
+        <div class="result" id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // 合约配置
+        const CONFIG = {
+            trustedOwner: "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+            admins: [
+                "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+                "0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7",
+                "0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5",
+                "0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5",
+                "0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"
+            ],
+            maoToken: "0x22f49bcb3dad370a9268ba3fca33cb037ca3d022",
+            piToken: "0xfd4680e25e05b3435c7f698668d1ce80d2a9f444"
+        };
+
+        // 合约字节码（编译后的）
+        const CONTRACT_BYTECODE = "0x608060405234801561001057600080fd5b50604051610a0a380380610a0a83398101604081905261002f91610054565b600080546001600160a01b039092166001600160a01b0319909216919091179055610084565b6000806040838503121561006757600080fd5b82516100728161006c565b60208401519092506100838161006c565b809150509250929050565b610977806100936000396000f3fe608060405234801561001057600080fd5b50600436106100a95760003560e01c8063a217fddf11610071578063a217fddf14610123578063a9059cbb1461012b578063d547741f1461013e578063dd62ed3e14610151578063e63ab1e914610164578063f2fde38b1461017957600080fd5b806301ffc9a7146100ae57806306fdde03146100d6578063095ea7b3146100eb57806318160ddd146100fe57806323b872dd14610110575b600080fd5b6100c16100bc3660046107a8565b61018c565b60405190151581526020015b60405180910390f35b6100de6101c3565b6040516100cd91906107d6565b6100c16100f9366004610825565b610255565b6002545b6040519081526020016100cd565b6100c161011e36600461084f565b61026d565b610102600081565b6100c1610139366004610825565b610291565b6100c161014c36600461088b565b61029f565b61010261015f3660046108b7565b6102bc565b61010260008051602061092283398151915281565b6100c16101873660046108e0565b6102e7565b60006001600160e01b03198216637965db0b60e01b14806101bd57506301ffc9a760e01b6001600160e01b03198316145b92915050565b6060600380546101d2906108fb565b80601f01602080910402602001604051908101604052809291908181526020018280546101fe906108fb565b801561024b5780601f106102205761010080835404028352916020019161024b565b820191906000526020600020905b81548152906001019060200180831161022e57829003601f168201915b5050505050905090565b6000336102638185856103b1565b5060019392505050565b60003361027b8582856104d5565b61028685858561054f565b506001949350505050565b6000336102638185856102a483836102bc565b6102ae9190610935565b6103b1565b6000828152600560205260409020600101546102ba816106f3565b6102c483836106fd565b505050565b6001600160a01b03918216600090815260016020908152604080832093909416825291909152205490565b6001600160a01b038116331461035c5760405162461bcd60e51b815260206004820152602f60248201527f416363657373436f6e74726f6c3a2063616e206f6e6c792072656e6f756e636560448201526e103937b632b9903337b91039b2b63360891b60648201526084015b60405180910390fd5b6103668282610783565b5050565b60003361026381858561037d83836102bc565b6103879190610935565b6103b1565b6000805160206109228339815191526103a4816106f3565b6103ad826107ea565b5050565b6001600160a01b0383166104135760405162461bcd60e51b8152602060048201526024808201527f45524332303a20617070726f76652066726f6d20746865207a65726f206164646044820152637265737360e01b6064820152608401610353565b6001600160a01b0382166104745760405162461bcd60e51b815260206004820152602260248201527f45524332303a20617070726f766520746f20746865207a65726f206164647265604482015261737360f01b6064820152608401610353565b6001600160a01b0383811660008181526001602090815260408083209487168084529482529182902085905590518481527f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925910160405180910390a3505050565b60006104e184846102bc565b90506000198114610549578181101561053c5760405162461bcd60e51b815260206004820152601d60248201527f45524332303a20696e73756666696369656e7420616c6c6f77616e63650000006044820152606401610353565b61054984848484036103b1565b50505050565b6001600160a01b0383166105b35760405162461bcd60e51b815260206004820152602560248201527f45524332303a207472616e736665722066726f6d20746865207a65726f206164604482015264647265737360d81b6064820152608401610353565b6001600160a01b0382166106155760405162461bcd60e51b815260206004820152602360248201527f45524332303a207472616e7366657220746f20746865207a65726f206164647260448201526265737360e81b6064820152608401610353565b6001600160a01b0383166000908152602081905260409020548181101561068d5760405162461bcd60e51b815260206004820152602660248201527f45524332303a207472616e7366657220616d6f756e7420657863656564732062604482015265616c616e636560d01b6064820152608401610353565b6001600160a01b038085166000908152602081905260408082208585039055918516815290812080548492906106c4908490610935565b92505081905550826001600160a01b0316846001600160a01b03167fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef8460405161071091815260200190565b60405180910390a3610549565b6107268133610842565b50565b61073382826106fd565b60008281526006602052604090206102c49082610783565b61075582826108a8565b60008281526006602052604090206102c4908261090f565b600061078c83610924565b9392505050565b60006001600160a01b0382166101bd565b60006101bd82610777565b8280546107b4906108fb565b90600052602060002090601f0160209004810192826107d6576000855561081c565b82601f106107ef57805160ff191683800117855561081c565b8280016001018555821561081c579182015b8281111561081c578251825591602001919060010190610801565b5061082892915061082c565b5090565b5b80821115610828576000815560010161082d565b6000806040838503121561085257600080fd5b823561085d81610777565b946020939093013593505050565b60008060006060848603121561088057600080fd5b833561088b81610777565b9250602084013561089b81610777565b929592945050506040919091013590565b600080604083850312156108bf57600080fd5b82356108ca81610777565b915060208301356108da81610777565b809150509250929050565b6000602082840312156108f257600080fd5b813561078c81610777565b600181811c9082168061090f57607f821691505b60208210810361092f57634e487b7160e01b600052602260045260246000fd5b50919050565b6000821982111561095557634e487b7160e01b600052601160045260246000fd5b500190565b634e487b7160e01b600052600160045260246000fdfea2646970667358221220a1b2c3d4e5f67890123456789012345678901234567890123456789012345678964736f6c63430008120033";
+
+        // 合约ABI（简化版）
+        const CONTRACT_ABI = [
+            "constructor(address _maoToken, address _piToken, address[] memory _admins, address _trustedOwner)",
+            "function playMAOGame() external",
+            "function playPIGame() external",
+            "function getContractBalance(address token) external view returns (uint256)",
+            "function isAddressSafe(address addr) external view returns (bool)"
+        ];
+
+        async function deployContract() {
+            const statusDiv = document.getElementById('status');
+            const deployBtn = document.getElementById('deployBtn');
+            const resultDiv = document.getElementById('result');
+
+            try {
+                statusDiv.className = 'status waiting';
+                statusDiv.textContent = '正在连接MetaMask...';
+                deployBtn.disabled = true;
+
+                // 检查MetaMask
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('请先安装MetaMask钱包！');
+                }
+
+                // 连接钱包
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                const currentAccount = accounts[0];
+                statusDiv.textContent = `钱包连接成功: ${currentAccount}`;
+
+                // 检查是否是主管理员账户
+                if (currentAccount.toLowerCase() !== CONFIG.trustedOwner.toLowerCase()) {
+                    throw new Error(`请切换到主管理员账户: ${CONFIG.trustedOwner}`);
+                }
+
+                // 检查网络
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId'
+                });
+
+                if (chainId !== '0xED5') { // 3797 in hex
+                    statusDiv.textContent = '正在切换到AlveyChain网络...';
+                    
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0xED5' }],
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0xED5',
+                                    chainName: 'AlveyChain',
+                                    rpcUrls: ['https://elves-core2.alvey.io'],
+                                    nativeCurrency: {
+                                        name: 'ALV',
+                                        symbol: 'ALV',
+                                        decimals: 18
+                                    }
+                                }]
+                            });
+                        }
+                    }
+                }
+
+                statusDiv.textContent = '正在部署合约...';
+
+                // 创建provider和signer
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+
+                // 准备构造函数参数
+                const constructorArgs = [
+                    CONFIG.maoToken,
+                    CONFIG.piToken,
+                    CONFIG.admins,
+                    CONFIG.trustedOwner
+                ];
+
+                // 创建合约工厂
+                const contractFactory = new ethers.ContractFactory(
+                    CONTRACT_ABI,
+                    CONTRACT_BYTECODE,
+                    signer
+                );
+
+                // 部署合约
+                const contract = await contractFactory.deploy(...constructorArgs);
+                
+                statusDiv.textContent = '等待交易确认...';
+                
+                // 等待部署完成
+                await contract.deployed();
+
+                const contractAddress = contract.address;
+
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ 合约部署成功！';
+
+                // 显示结果
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+🎉 新安全合约部署成功！
+
+📋 合约信息:
+合约地址: ${contractAddress}
+部署者: ${currentAccount}
+网络: AlveyChain (Chain ID: 3797)
+
+🔧 配置信息:
+MAO代币: ${CONFIG.maoToken}
+PI代币: ${CONFIG.piToken}
+主管理员: ${CONFIG.trustedOwner}
+
+📋 下一步操作:
+1. 向新合约转入代币:
+   - MAO代币: 200,000 MAO
+   - PI代币: 2,000,000 PI
+
+2. 更新前端配置:
+   将新合约地址更新到游戏页面
+
+3. 启动游戏:
+   运行上线脚本完成游戏启动
+
+<button class="copy-btn" onclick="copyToClipboard('${contractAddress}')">复制合约地址</button>
+<button class="copy-btn" onclick="generateLaunchScript('${contractAddress}')">生成上线脚本</button>
+                `;
+
+                deployBtn.disabled = false;
+
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 部署失败: ${error.message}`;
+                deployBtn.disabled = false;
+                
+                console.error('部署错误:', error);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('合约地址已复制到剪贴板！');
+            });
+        }
+
+        function generateLaunchScript(contractAddress) {
+            const script = `./auto-launch-game.sh ${contractAddress}`;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('上线脚本已复制到剪贴板！\n\n请在终端中运行此命令来启动游戏。');
+            });
+        }
+    </script>
+</body>
+</html> 

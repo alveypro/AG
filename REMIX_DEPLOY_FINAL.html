@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Remix IDE 最终部署指南 - MAO游戏</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .step {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .step h3 {
+            color: #FFD700;
+            margin-top: 0;
+        }
+        .code-block {
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            border: 1px solid rgba(255,255,255,0.3);
+            overflow-x: auto;
+        }
+        .copy-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .copy-btn:hover {
+            transform: translateY(-2px);
+        }
+        .warning {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .link-btn {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            display: inline-block;
+            margin: 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .link-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+        .deploy-params {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #FFD700;
+        }
+        .important {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid #F44336;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Remix IDE 最终部署指南</h1>
+        
+        <div class="important">
+            <strong>🔧 重要说明：</strong> 由于ethers v6版本兼容性问题，Hardhat部署遇到数组参数处理问题。Remix IDE是最可靠的部署方法！
+        </div>
+
+        <div class="step">
+            <h3>📋 第1步：打开Remix IDE</h3>
+            <p>点击下面的链接打开Remix IDE：</p>
+            <a href="https://remix.ethereum.org" target="_blank" class="link-btn">🌐 打开 Remix IDE</a>
+        </div>
+
+        <div class="step">
+            <h3>📝 第2步：创建合约文件</h3>
+            <p>在Remix IDE中：</p>
+            <ol>
+                <li>点击左侧的"File Explorer"</li>
+                <li>右键点击"contracts"文件夹</li>
+                <li>选择"New File"</li>
+                <li>文件名输入：<code>UltraSecureWheelGame.sol</code></li>
+            </ol>
+            
+            <p>然后将以下合约代码复制粘贴到文件中：</p>
+            <button class="copy-btn" onclick="copyContractCode()">📋 复制合约代码</button>
+            <div class="code-block" id="contractCode">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract UltraSecureWheelGame is ReentrancyGuard, AccessControl, Pausable {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
+
+    uint256 public constant REQUIRED_SIGNATURES = 3;
+    uint256 public constant MIN_ADMIN_COUNT = 5;
+    uint256 public adminCount;
+
+    uint256 public constant TIMELOCK_DELAY = 24 hours;
+    uint256 public maxSingleWithdraw = 10000 * 10**18;
+    uint256 public dailyWithdrawLimit = 50000 * 10**18;
+    
+    uint256 public maoGameCost = 100 * 10**18;
+    uint256 public piGameCost = 1000 * 10**18;
+    
+    IERC20 public maoToken;
+    IERC20 public piToken;
+    
+    mapping(address => bool) public blacklistedAddresses;
+    mapping(bytes32 => uint256) public timelockOperations;
+    mapping(bytes32 => bool) public executedOperations;
+    
+    struct GameStats {
+        uint256 totalGames;
+        uint256 totalWins;
+        uint256 totalBets;
+        uint256 totalRewards;
+    }
+    
+    struct GameRecord {
+        address player;
+        uint8 tokenType;
+        uint256 betAmount;
+        uint256 rewardAmount;
+        uint8 rewardLevel;
+        uint256 timestamp;
+        uint256 randomSeed;
+        bool wasProtected;
+    }
+    
+    mapping(uint8 => GameStats) public gameStats;
+    mapping(address => GameRecord[]) public playerHistory;
+    
+    event GamePlayed(
+        address indexed player,
+        uint8 tokenType,
+        uint256 betAmount,
+        uint256 rewardAmount,
+        uint8 rewardLevel,
+        uint256 randomSeed,
+        bool wasProtected
+    );
+    
+    event SecurityAlert(
+        string alertType,
+        address indexed triggeredBy,
+        string description,
+        uint256 timestamp
+    );
+    
+    event BlacklistUpdated(address indexed addr, bool isBlacklisted);
+    event EmergencyAction(string action, address indexed by, uint256 timestamp);
+
+    modifier onlyTrustedAdmin() {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
+        require(!blacklistedAddresses[msg.sender], "Admin is blacklisted");
+        _;
+    }
+    
+    modifier notBlacklisted(address addr) {
+        require(!blacklistedAddresses[addr], "Address is blacklisted");
+        _;
+    }
+
+    constructor(
+        address _maoToken,
+        address _piToken,
+        address[] memory _admins,
+        address _trustedOwner
+    ) {
+        require(_maoToken != address(0), "Invalid MAO token");
+        require(_piToken != address(0), "Invalid PI token");
+        require(_admins.length >= MIN_ADMIN_COUNT, "Need at least 5 admins");
+        require(_trustedOwner != address(0), "Invalid trusted owner");
+        
+        maoToken = IERC20(_maoToken);
+        piToken = IERC20(_piToken);
+        
+        _grantRole(DEFAULT_ADMIN_ROLE, _trustedOwner);
+        _grantRole(ADMIN_ROLE, _trustedOwner);
+        _grantRole(EMERGENCY_ROLE, _trustedOwner);
+        
+        for (uint i = 0; i < _admins.length; i++) {
+            require(_admins[i] != address(0), "Invalid admin address");
+            require(!blacklistedAddresses[_admins[i]], "Admin is blacklisted");
+            _grantRole(ADMIN_ROLE, _admins[i]);
+            adminCount++;
+        }
+        
+        blacklistedAddresses[0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7] = true;
+        
+        emit SecurityAlert(
+            "CONTRACT_DEPLOYED",
+            msg.sender,
+            "Ultra secure wheel game deployed with enhanced security",
+            block.timestamp
+        );
+        
+        emit BlacklistUpdated(0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7, true);
+    }
+    
+    function playMAOGame() external nonReentrant whenNotPaused notBlacklisted(msg.sender) {
+        require(maoToken.transferFrom(msg.sender, address(this), maoGameCost), "MAO transfer failed");
+        
+        uint256 randomSeed = _generateRandomSeed();
+        (uint256 rewardAmount, uint8 rewardLevel, bool isWin) = _calculateReward(randomSeed, 0);
+        
+        if (isWin && rewardAmount > 0) {
+            require(maoToken.transfer(msg.sender, rewardAmount), "MAO reward transfer failed");
+        }
+        
+        _recordGame(msg.sender, 0, maoGameCost, rewardAmount, rewardLevel, randomSeed);
+        
+        emit GamePlayed(msg.sender, 0, maoGameCost, rewardAmount, rewardLevel, randomSeed, false);
+    }
+    
+    function playPIGame() external nonReentrant whenNotPaused notBlacklisted(msg.sender) {
+        require(piToken.transferFrom(msg.sender, address(this), piGameCost), "PI transfer failed");
+        
+        uint256 randomSeed = _generateRandomSeed();
+        (uint256 rewardAmount, uint8 rewardLevel, bool isWin) = _calculateReward(randomSeed, 1);
+        
+        if (isWin && rewardAmount > 0) {
+            require(piToken.transfer(msg.sender, rewardAmount), "PI reward transfer failed");
+        }
+        
+        _recordGame(msg.sender, 1, piGameCost, rewardAmount, rewardLevel, randomSeed);
+        
+        emit GamePlayed(msg.sender, 1, piGameCost, rewardAmount, rewardLevel, randomSeed, false);
+    }
+    
+    function addToBlacklist(address addr) external onlyTrustedAdmin {
+        require(addr != address(0), "Invalid address");
+        require(!hasRole(ADMIN_ROLE, addr), "Cannot blacklist admin");
+        
+        blacklistedAddresses[addr] = true;
+        emit BlacklistUpdated(addr, true);
+        
+        emit SecurityAlert(
+            "BLACKLIST_ADDED",
+            msg.sender,
+            "Address added to blacklist",
+            block.timestamp
+        );
+    }
+    
+    function removeFromBlacklist(address addr) external onlyTrustedAdmin {
+        blacklistedAddresses[addr] = false;
+        emit BlacklistUpdated(addr, false);
+    }
+    
+    function emergencyPause() external onlyRole(EMERGENCY_ROLE) {
+        _pause();
+        emit EmergencyAction("PAUSE", msg.sender, block.timestamp);
+        
+        emit SecurityAlert(
+            "EMERGENCY_PAUSE",
+            msg.sender,
+            "Contract paused due to emergency",
+            block.timestamp
+        );
+    }
+    
+    function emergencyUnpause() external onlyRole(EMERGENCY_ROLE) {
+        _unpause();
+        emit EmergencyAction("UNPAUSE", msg.sender, block.timestamp);
+    }
+    
+    function getPlayerHistory(address player) external view returns (GameRecord[] memory) {
+        return playerHistory[player];
+    }
+    
+    function getGameStats(uint8 tokenType) external view returns (GameStats memory) {
+        return gameStats[tokenType];
+    }
+    
+    function getContractBalance(address token) external view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
+    }
+    
+    function isAddressSafe(address addr) external view returns (bool) {
+        return !blacklistedAddresses[addr] && addr != address(0);
+    }
+    
+    function _generateRandomSeed() private view returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(
+            block.timestamp,
+            block.difficulty,
+            msg.sender,
+            blockhash(block.number - 1)
+        )));
+    }
+    
+    function _calculateReward(uint256 randomSeed, uint8 tokenType) private view returns (uint256 rewardAmount, uint8 rewardLevel, bool isWin) {
+        uint256 chance = randomSeed % 100;
+        
+        if (chance < 30) {
+            isWin = true;
+            
+            if (chance < 1) {
+                rewardLevel = 4;
+                rewardAmount = tokenType == 0 ? 10000 * 10**18 : 50000 * 10**18;
+            } else if (chance < 5) {
+                rewardLevel = 3;
+                rewardAmount = tokenType == 0 ? 2000 * 10**18 : 10000 * 10**18;
+            } else if (chance < 15) {
+                rewardLevel = 2;
+                rewardAmount = tokenType == 0 ? 500 * 10**18 : 2500 * 10**18;
+            } else {
+                rewardLevel = 1;
+                rewardAmount = tokenType == 0 ? 150 * 10**18 : 1500 * 10**18;
+            }
+        } else {
+            isWin = false;
+            rewardLevel = 0;
+            rewardAmount = 0;
+        }
+    }
+    
+    function _recordGame(
+        address player,
+        uint8 tokenType,
+        uint256 betAmount,
+        uint256 rewardAmount,
+        uint8 rewardLevel,
+        uint256 randomSeed
+    ) private {
+        GameRecord memory record = GameRecord({
+            player: player,
+            tokenType: tokenType,
+            betAmount: betAmount,
+            rewardAmount: rewardAmount,
+            rewardLevel: rewardLevel,
+            timestamp: block.timestamp,
+            randomSeed: randomSeed,
+            wasProtected: true
+        });
+        
+        playerHistory[player].push(record);
+        
+        GameStats storage stats = gameStats[tokenType];
+        stats.totalGames++;
+        stats.totalBets += betAmount;
+        
+        if (rewardAmount > 0) {
+            stats.totalWins++;
+            stats.totalRewards += rewardAmount;
+        }
+    }
+    
+    function emergencyWithdraw(address token, uint256 amount) external onlyRole(EMERGENCY_ROLE) whenPaused {
+        require(token == address(maoToken) || token == address(piToken), "Invalid token");
+        IERC20(token).transfer(msg.sender, amount);
+        
+        emit EmergencyAction("EMERGENCY_WITHDRAW", msg.sender, block.timestamp);
+        
+        emit SecurityAlert(
+            "EMERGENCY_WITHDRAWAL",
+            msg.sender,
+            "Emergency withdrawal executed",
+            block.timestamp
+        );
+    }
+    
+    receive() external payable {
+        revert("Contract does not accept ETH");
+    }
+}</div>
+        </div>
+
+        <div class="step">
+            <h3>🔧 第3步：编译合约</h3>
+            <p>在Remix IDE中：</p>
+            <ol>
+                <li>点击左侧的"Solidity Compiler"</li>
+                <li>确保编译器版本选择：<code>0.8.19</code></li>
+                <li>点击"Compile UltraSecureWheelGame.sol"</li>
+                <li>等待编译完成（应该显示绿色勾号）</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🌐 第4步：配置网络</h3>
+            <p>在Remix IDE中：</p>
+            <ol>
+                <li>点击左侧的"Deploy & Run Transactions"</li>
+                <li>在"Environment"下拉菜单中选择"Injected Provider - MetaMask"</li>
+                <li>确保MetaMask已连接到AlveyChain网络</li>
+                <li>确保账户已选择正确的钱包地址：<code>0xAf2032168aa1f7DD09f7dFbE294ad40E30E54408</code></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🚀 第5步：部署合约</h3>
+            <p>在Remix IDE的"Deploy & Run Transactions"页面：</p>
+            <ol>
+                <li>找到"UltraSecureWheelGame"合约</li>
+                <li>在构造函数参数中填入以下值：</li>
+            </ol>
+            
+            <div class="deploy-params">
+                <strong>部署参数：</strong><br>
+                <code>_maoToken:</code> 0x22f49bcb3dad370a9268ba3fca33cb037ca3d022<br>
+                <code>_piToken:</code> 0xfd4680e25e05b3435c7f698668d1ce80d2a9f444<br>
+                <code>_admins:</code> [0xAf2032168aa1f7DD09f7dFbE294ad40E30E54408, 0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7, 0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5, 0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5, 0x64294e2f66AB7221ecC8FAeF418cdA75E215A053]<br>
+                <code>_trustedOwner:</code> 0xAf2032168aa1f7DD09f7dFbE294ad40E30E54408
+            </div>
+            
+            <button class="copy-btn" onclick="copyDeployParams()">📋 复制部署参数</button>
+            
+            <p>然后点击"Deploy"按钮开始部署！</p>
+        </div>
+
+        <div class="step">
+            <h3>✅ 第6步：验证部署</h3>
+            <p>部署完成后：</p>
+            <ol>
+                <li>在"Deployed Contracts"部分找到你的合约</li>
+                <li>记录合约地址</li>
+                <li>在AlveyScan上验证合约：<a href="https://alveyscan.com" target="_blank" class="link-btn">🌐 AlveyScan</a></li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <strong>🎉 部署完成后：</strong><br>
+            1. 记录合约地址<br>
+            2. 更新游戏前端配置<br>
+            3. 向合约充值代币<br>
+            4. 开始游戏测试
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ 重要提醒：</strong><br>
+            - 确保使用正确的钱包地址：0xAf2032168aa1f7DD09f7dFbE294ad40E30E54408<br>
+            - 确保钱包有足够的ALV余额（建议至少0.1 ALV）<br>
+            - 部署完成后立即记录合约地址
+        </div>
+    </div>
+
+    <script>
+        function copyContractCode() {
+            const code = document.getElementById('contractCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ 合约代码已复制到剪贴板！');
+            });
+        }
+
+        function copyDeployParams() {
+            const params = `0x22f49bcb3dad370a9268ba3fca33cb037ca3d022,0xfd4680e25e05b3435c7f698668d1ce80d2a9f444,["0xAf2032168aa1f7DD09f7dFbE294ad40E30E54408","0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7","0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5","0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5","0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"],0xAf2032168aa1f7DD09f7dFbE294ad40E30E54408`;
+            navigator.clipboard.writeText(params).then(() => {
+                alert('✅ 部署参数已复制到剪贴板！');
+            });
+        }
+    </script>
+</body>
+</html> 
+ 
+ 
+ 

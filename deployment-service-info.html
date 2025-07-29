@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💼 MAO游戏合约部署服务信息</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .service-box {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border-left: 5px solid #4CAF50;
+        }
+        .cost-box {
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid #FFC107;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        .tech-requirements {
+            background: rgba(33, 150, 243, 0.2);
+            border: 2px solid #2196F3;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        .contact-info {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .copy-btn {
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            margin: 15px 0;
+            border: 2px solid #4ECDC4;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💼 MAO游戏合约部署服务</h1>
+        
+        <div class="service-box">
+            <h2>🎯 我需要什么服务？</h2>
+            <p><strong>完整的智能合约部署服务，包括：</strong></p>
+            <ul>
+                <li>🔧 部署UltraSecureWheelGame合约到AlveyChain</li>
+                <li>🛡️ 配置5个管理员地址和安全参数</li>
+                <li>🚫 自动拉黑恶意地址</li>
+                <li>📋 提供完整的部署报告</li>
+                <li>✅ 测试合约功能</li>
+            </ul>
+        </div>
+
+        <div class="cost-box">
+            <h2>💰 预计成本</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>🔹 技术服务费：</h4>
+                    <ul>
+                        <li>部署服务：50-200 USDT</li>
+                        <li>测试验证：20-50 USDT</li>
+                        <li>文档报告：20-30 USDT</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>🔹 区块链费用：</h4>
+                    <ul>
+                        <li>Gas费用：0.1-0.3 ALV</li>
+                        <li>网络费用：~$2-5</li>
+                        <li>测试费用：0.05 ALV</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px; margin-top: 15px;">
+                <strong>💡 总预算：100-300 USDT + 0.2 ALV</strong>
+            </div>
+        </div>
+
+        <div class="tech-requirements">
+            <h2>📋 技术要求清单</h2>
+            <p><strong>告诉技术人员这些信息：</strong></p>
+            
+            <h4>🔧 合约参数：</h4>
+            <div class="code-block">
+MAO代币地址: 0x22f49bcb3dad370a9268ba3fca33cb037ca3d022
+PI代币地址: 0xfd4680e25e05b3435c7f698668d1ce80d2a9f444
+管理员地址: 
+- 0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28 (主管理员)
+- 0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7
+- 0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5  
+- 0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5
+- 0x64294e2f66AB7221ecC8FAeF418cdA75E215A053
+恶意地址黑名单: 0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7
+            </div>
+            <button class="copy-btn" onclick="copyTechInfo()">📋 复制技术信息</button>
+
+            <h4>🌐 网络信息：</h4>
+            <div class="code-block">
+网络: AlveyChain
+RPC: https://elves-core2.alvey.io
+链ID: 3797
+符号: ALV
+浏览器: https://alveyscan.com
+            </div>
+            <button class="copy-btn" onclick="copyNetworkInfo()">📋 复制网络信息</button>
+        </div>
+
+        <div class="service-box">
+            <h2>🔍 如何找到技术人员？</h2>
+            <ol>
+                <li><strong>区块链开发者社群：</strong>
+                    <ul>
+                        <li>Telegram区块链开发群</li>
+                        <li>Discord智能合约社区</li>
+                        <li>GitHub Solidity开发者</li>
+                    </ul>
+                </li>
+                <li><strong>自由职业平台：</strong>
+                    <ul>
+                        <li>Upwork (搜索"Solidity Developer")</li>
+                        <li>Fiverr (搜索"Smart Contract Deployment")</li>
+                        <li>猪八戒网 (搜索"区块链开发")</li>
+                    </ul>
+                </li>
+                <li><strong>技术服务公司：</strong>
+                    <ul>
+                        <li>本地区块链技术公司</li>
+                        <li>DApp开发工作室</li>
+                        <li>智能合约审计公司</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="contact-info">
+            <h2>📞 服务要求模板</h2>
+            <p><strong>您可以这样联系技术人员：</strong></p>
+            <div class="code-block" id="serviceTemplate">
+我需要在AlveyChain上部署一个智能合约：
+
+项目：MAO游戏超级安全合约
+合约：UltraSecureWheelGame.sol (已提供完整代码)
+网络：AlveyChain (链ID: 3797)
+预算：100-300 USDT + gas费
+
+服务内容：
+1. 在AlveyChain部署合约
+2. 配置5个管理员地址
+3. 设置安全参数和黑名单
+4. 测试合约功能
+5. 提供部署报告和合约地址
+
+我有完整的合约代码和参数，需要有经验的Solidity开发者。
+请提供报价和预计完成时间。
+            </div>
+            <button class="copy-btn" onclick="copyServiceTemplate()">📋 复制服务要求</button>
+        </div>
+
+        <div class="cost-box">
+            <h2>⚠️ 重要提醒</h2>
+            <ul>
+                <li>🔒 <strong>永远不要分享私钥</strong> - 只分享要部署的地址</li>
+                <li>💰 <strong>先小额测试</strong> - 确认技术人员可靠后再支付全款</li>
+                <li>📋 <strong>要求提供</strong> - 部署交易哈希、合约地址、测试报告</li>
+                <li>🕒 <strong>设定时限</strong> - 通常1-3天内完成</li>
+                <li>✅ <strong>验证结果</strong> - 确认合约地址和功能正常</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function copyTechInfo() {
+            const info = `MAO代币地址: 0x22f49bcb3dad370a9268ba3fca33cb037ca3d022
+PI代币地址: 0xfd4680e25e05b3435c7f698668d1ce80d2a9f444
+管理员地址: 
+- 0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28 (主管理员)
+- 0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7
+- 0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5  
+- 0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5
+- 0x64294e2f66AB7221ecC8FAeF418cdA75E215A053
+恶意地址黑名单: 0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7`;
+            
+            navigator.clipboard.writeText(info).then(() => {
+                alert('✅ 技术信息已复制！');
+            });
+        }
+
+        function copyNetworkInfo() {
+            const info = `网络: AlveyChain
+RPC: https://elves-core2.alvey.io
+链ID: 3797
+符号: ALV
+浏览器: https://alveyscan.com`;
+            
+            navigator.clipboard.writeText(info).then(() => {
+                alert('✅ 网络信息已复制！');
+            });
+        }
+
+        function copyServiceTemplate() {
+            const template = document.getElementById('serviceTemplate').textContent;
+            navigator.clipboard.writeText(template).then(() => {
+                alert('✅ 服务要求模板已复制！');
+            });
+        }
+    </script>
+</body>
+</html> 

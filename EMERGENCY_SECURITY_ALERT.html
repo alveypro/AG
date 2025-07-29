@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 紧急安全警告 - MAO游戏</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 20px;
+            padding: 40px;
+            border: 3px solid #ef4444;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        .alert-icon {
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin: 20px 0;
+            color: #fef2f2;
+        }
+        .critical {
+            background: #7f1d1d;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #ef4444;
+        }
+        .warning {
+            background: #78350f;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #f59e0b;
+        }
+        .info {
+            background: #1e3a8a;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #3b82f6;
+        }
+        .action {
+            background: #065f46;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #10b981;
+        }
+        .contract-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .deploy-btn {
+            background: linear-gradient(45deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px 10px;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        .deploy-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+        }
+        .blink {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="alert-icon">🚨</div>
+        <h1>🚨 紧急安全警告</h1>
+        
+        <div class="critical">
+            <h3>🔴 严重安全威胁检测到</h3>
+            <p><strong class="blink">当前游戏合约已被恶意控制！</strong></p>
+            <p>我们发现了严重的合约安全问题，立即采取紧急措施保护用户资金。</p>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ 威胁详情</h3>
+            <p><strong>当前游戏合约地址：</strong></p>
+            <div class="contract-info">0x621DF9e0DE6b4e7EDC5Dc22Cd7c0F883c3F56966</div>
+            
+            <p><strong>恶意Owner地址：</strong></p>
+            <div class="contract-info">0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7</div>
+            
+            <p><strong>您的安全地址：</strong></p>
+            <div class="contract-info">0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28</div>
+            
+            <p><strong>状态：</strong> ❌ 完全不匹配！合约已被恶意控制</p>
+        </div>
+
+        <div class="critical">
+            <h3>🚫 立即停止所有活动</h3>
+            <ul>
+                <li>🚫 <strong>立即停止所有游戏活动</strong></li>
+                <li>🚫 <strong>请勿向任何地址转账</strong></li>
+                <li>🚫 <strong>请勿点击可疑链接</strong></li>
+                <li>🚫 <strong>请勿分享私钥或助记词</strong></li>
+                <li>🚫 <strong>请勿进行任何代币交易</strong></li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🔧 我们正在做什么</h3>
+            <ul>
+                <li>🔍 全面排查安全隐患</li>
+                <li>🛡️ 部署新的超级安全合约</li>
+                <li>🔐 实施多重签名保护</li>
+                <li>📊 建立实时安全监控</li>
+                <li>✅ 确保用户资金安全</li>
+            </ul>
+        </div>
+
+        <div class="action">
+            <h3>✅ 立即部署安全合约</h3>
+            <p>我们已经准备了完全安全的合约，具有以下特性：</p>
+            <ul>
+                <li>✅ 多重签名保护 (5/3)</li>
+                <li>✅ 24小时时间锁</li>
+                <li>✅ 黑名单保护</li>
+                <li>✅ 重入攻击防护</li>
+                <li>✅ 紧急暂停功能</li>
+                <li>✅ 智能限额控制</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="direct-deploy.html" class="deploy-btn">🚀 立即部署安全合约</a>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>⏰ 预计恢复时间</h3>
+            <p><strong>2-4小时内完成安全升级</strong></p>
+            <p>我们会在第一时间发布更新通知</p>
+        </div>
+
+        <div class="info">
+            <h3>📞 紧急联系</h3>
+            <p>如有紧急问题，请通过以下方式联系我们：</p>
+            <ul>
+                <li>📧 官方邮箱：security@maogame.com</li>
+                <li>💬 官方群组：MAO安全通知群</li>
+                <li>🌐 官方网站：持续更新中</li>
+            </ul>
+        </div>
+
+        <div class="critical">
+            <h3>🎯 下一步计划</h3>
+            <p>安全升级完成后，我们将：</p>
+            <ul>
+                <li>✅ 发布新的超级安全版本</li>
+                <li>✅ 提供用户资金迁移服务</li>
+                <li>✅ 公开透明的安全审计报告</li>
+                <li>✅ 建立永久安全监控系统</li>
+                <li>✅ 补偿受影响的用户</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0; font-size: 0.9rem; color: #d1d5db;">
+            <p>通知发布时间：<span id="currentTime"></span></p>
+            <p>最后更新：<span id="updateTime"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // 显示当前时间
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-CN');
+            document.getElementById('currentTime').textContent = timeString;
+            document.getElementById('updateTime').textContent = timeString;
+        }
+        
+        updateTime();
+        setInterval(updateTime, 60000);
+        
+        // 防止用户尝试游戏操作
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.ethereum) {
+                console.warn('🚨 游戏已暂停，请等待安全升级完成');
+            }
+        });
+        
+        // 显示安全提示
+        setTimeout(() => {
+            alert('🚨 紧急安全警告！\n\n当前游戏合约已被恶意控制\n请立即停止所有游戏活动\n不要进行任何代币交易\n\n我们正在部署新的安全合约\n感谢您的理解与配合！');
+        }, 2000);
+    </script>
+</body>
+</html> 
+ 
+ 
+ 
+ 
+ 
+ 

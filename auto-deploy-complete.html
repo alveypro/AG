@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 MAO游戏全自动部署</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .auto-btn {
+            background: linear-gradient(45deg, #FF6B6B, #FF5252);
+            color: white;
+            border: none;
+            padding: 25px 50px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+            width: 100%;
+            margin: 20px 0;
+        }
+        .auto-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.5);
+        }
+        .auto-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .status.waiting {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+        }
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid #4CAF50;
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 2px solid #f44336;
+        }
+        .result {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-size: 14px;
+            text-align: left;
+        }
+        .progress {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.05);
+        }
+        .step.completed {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4CAF50;
+        }
+        .step.current {
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 4px solid #FFC107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 MAO游戏全自动部署</h1>
+        
+        <div class="status waiting" id="status">
+            准备开始全自动部署...
+        </div>
+        
+        <button class="auto-btn" onclick="startAutoDeploy()" id="deployBtn">
+            🚀 一键全自动部署MAO游戏
+        </button>
+        
+        <div class="progress" id="progress" style="display: none;">
+            <div class="step" id="step1">1️⃣ 检测钱包环境...</div>
+            <div class="step" id="step2">2️⃣ 添加AlveyChain网络...</div>
+            <div class="step" id="step3">3️⃣ 连接钱包...</div>
+            <div class="step" id="step4">4️⃣ 准备合约代码...</div>
+            <div class="step" id="step5">5️⃣ 部署合约...</div>
+            <div class="step" id="step6">6️⃣ 验证部署...</div>
+        </div>
+        
+        <div class="result" id="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // 合约配置
+        const CONFIG = {
+            trustedOwner: "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+            admins: [
+                "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+                "0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7",
+                "0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5",
+                "0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5",
+                "0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"
+            ],
+            maoToken: "0x22f49bcb3dad370a9268ba3fca33cb037ca3d022",
+            piToken: "0xfd4680e25e05b3435c7f698668d1ce80d2a9f444"
+        };
+
+        // 合约代码
+        const CONTRACT_CODE = `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+contract UltraSecureWheelGame is ReentrancyGuard, AccessControl, Pausable {
+    using ECDSA for bytes32;
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 public constant EMERGENCY_ROLE = keccak256("EMERGENCY_ROLE");
+
+    uint256 public constant REQUIRED_SIGNATURES = 3;
+    uint256 public constant MIN_ADMIN_COUNT = 5;
+    uint256 public adminCount;
+
+    uint256 public constant TIMELOCK_DELAY = 24 hours;
+    uint256 public constant EMERGENCY_TIMELOCK = 1 hours;
+
+    uint256 public maxSingleWithdraw = 10000 * 10**18;
+    uint256 public dailyWithdrawLimit = 50000 * 10**18;
+    uint256 public weeklyWithdrawLimit = 200000 * 10**18;
+    
+    uint256 public maoGameCost = 100 * 10**18;
+    uint256 public piGameCost = 1000 * 10**18;
+    
+    IERC20 public maoToken;
+    IERC20 public piToken;
+    
+    mapping(address => bool) public blacklistedAddresses;
+    mapping(bytes32 => uint256) public timelockOperations;
+    mapping(bytes32 => bool) public executedOperations;
+    
+    mapping(address => mapping(uint256 => uint256)) public dailyWithdrawn;
+    mapping(address => mapping(uint256 => uint256)) public weeklyWithdrawn;
+    
+    struct GameStats {
+        uint256 totalGames;
+        uint256 totalWins;
+        uint256 totalBets;
+        uint256 totalRewards;
+    }
+    
+    struct GameRecord {
+        address player;
+        uint8 tokenType;
+        uint256 betAmount;
+        uint256 rewardAmount;
+        uint8 rewardLevel;
+        uint256 timestamp;
+        uint256 randomSeed;
+        bool wasProtected;
+    }
+    
+    mapping(uint8 => GameStats) public gameStats;
+    mapping(address => GameRecord[]) public playerHistory;
+    
+    struct MultiSigOperation {
+        bytes32 operationHash;
+        address[] signers;
+        uint256 requiredSigs;
+        uint256 deadline;
+        bool executed;
+        bytes data;
+    }
+    
+    mapping(bytes32 => MultiSigOperation) public multiSigOps;
+    mapping(bytes32 => mapping(address => bool)) public hasSigned;
+    
+    event GamePlayed(
+        address indexed player,
+        uint8 tokenType,
+        uint256 betAmount,
+        uint256 rewardAmount,
+        uint8 rewardLevel,
+        uint256 randomSeed,
+        bool wasProtected
+    );
+    
+    event SecurityAlert(
+        string alertType,
+        address indexed triggeredBy,
+        string description,
+        uint256 timestamp
+    );
+    
+    event BlacklistUpdated(address indexed addr, bool isBlacklisted);
+    event EmergencyAction(string action, address indexed by, uint256 timestamp);
+    event MultiSigOperationCreated(bytes32 indexed opHash, address indexed creator);
+    event MultiSigOperationSigned(bytes32 indexed opHash, address indexed signer);
+    event MultiSigOperationExecuted(bytes32 indexed opHash);
+    
+    modifier onlyTrustedAdmin() {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Not admin");
+        require(!blacklistedAddresses[msg.sender], "Admin is blacklisted");
+        _;
+    }
+    
+    modifier notBlacklisted(address addr) {
+        require(!blacklistedAddresses[addr], "Address is blacklisted");
+        _;
+    }
+    
+    modifier timelockProtected(bytes32 operation) {
+        require(
+            timelockOperations[operation] != 0 && 
+            block.timestamp >= timelockOperations[operation],
+            "Timelock not satisfied"
+        );
+        require(!executedOperations[operation], "Operation already executed");
+        _;
+    }
+    
+    modifier multiSigProtected(bytes32 opHash) {
+        MultiSigOperation storage op = multiSigOps[opHash];
+        require(op.signers.length >= op.requiredSigs, "Insufficient signatures");
+        require(!op.executed, "Already executed");
+        require(block.timestamp <= op.deadline, "Operation expired");
+        _;
+    }
+
+    constructor(
+        address _maoToken,
+        address _piToken,
+        address[] memory _admins,
+        address _trustedOwner
+    ) {
+        require(_maoToken != address(0), "Invalid MAO token");
+        require(_piToken != address(0), "Invalid PI token");
+        require(_admins.length >= MIN_ADMIN_COUNT, "Need at least 5 admins");
+        require(_trustedOwner != address(0), "Invalid trusted owner");
+        
+        maoToken = IERC20(_maoToken);
+        piToken = IERC20(_piToken);
+        
+        _grantRole(DEFAULT_ADMIN_ROLE, _trustedOwner);
+        _grantRole(ADMIN_ROLE, _trustedOwner);
+        _grantRole(EMERGENCY_ROLE, _trustedOwner);
+        
+        for (uint i = 0; i < _admins.length; i++) {
+            require(_admins[i] != address(0), "Invalid admin address");
+            require(!blacklistedAddresses[_admins[i]], "Admin is blacklisted");
+            _grantRole(ADMIN_ROLE, _admins[i]);
+            adminCount++;
+        }
+        
+        blacklistedAddresses[0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7] = true;
+        
+        emit SecurityAlert(
+            "CONTRACT_DEPLOYED",
+            msg.sender,
+            "Ultra secure wheel game deployed with enhanced security",
+            block.timestamp
+        );
+        
+        emit BlacklistUpdated(0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7, true);
+    }
+    
+    function playMAOGame() external nonReentrant whenNotPaused notBlacklisted(msg.sender) {
+        require(maoToken.transferFrom(msg.sender, address(this), maoGameCost), "MAO transfer failed");
+        
+        uint256 randomSeed = _generateRandomSeed();
+        (uint256 rewardAmount, uint8 rewardLevel, bool isWin) = _calculateReward(randomSeed, 0);
+        
+        if (isWin && rewardAmount > 0) {
+            require(maoToken.transfer(msg.sender, rewardAmount), "MAO reward transfer failed");
+        }
+        
+        _recordGame(msg.sender, 0, maoGameCost, rewardAmount, rewardLevel, randomSeed);
+        
+        emit GamePlayed(msg.sender, 0, maoGameCost, rewardAmount, rewardLevel, randomSeed, false);
+    }
+    
+    function playPIGame() external nonReentrant whenNotPaused notBlacklisted(msg.sender) {
+        require(piToken.transferFrom(msg.sender, address(this), piGameCost), "PI transfer failed");
+        
+        uint256 randomSeed = _generateRandomSeed();
+        (uint256 rewardAmount, uint8 rewardLevel, bool isWin) = _calculateReward(randomSeed, 1);
+        
+        if (isWin && rewardAmount > 0) {
+            require(piToken.transfer(msg.sender, rewardAmount), "PI reward transfer failed");
+        }
+        
+        _recordGame(msg.sender, 1, piGameCost, rewardAmount, rewardLevel, randomSeed);
+        
+        emit GamePlayed(msg.sender, 1, piGameCost, rewardAmount, rewardLevel, randomSeed, false);
+    }
+    
+    function scheduleOperation(bytes32 operation, bool isEmergency) external onlyTrustedAdmin {
+        uint256 delay = isEmergency ? EMERGENCY_TIMELOCK : TIMELOCK_DELAY;
+        timelockOperations[operation] = block.timestamp + delay;
+        
+        emit SecurityAlert(
+            "TIMELOCK_SCHEDULED",
+            msg.sender,
+            "Operation scheduled with timelock",
+            block.timestamp
+        );
+    }
+    
+    function addToBlacklist(address addr) external onlyTrustedAdmin {
+        require(addr != address(0), "Invalid address");
+        require(!hasRole(ADMIN_ROLE, addr), "Cannot blacklist admin");
+        
+        blacklistedAddresses[addr] = true;
+        emit BlacklistUpdated(addr, true);
+        
+        emit SecurityAlert(
+            "BLACKLIST_ADDED",
+            msg.sender,
+            "Address added to blacklist",
+            block.timestamp
+        );
+    }
+    
+    function removeFromBlacklist(address addr) external onlyTrustedAdmin {
+        blacklistedAddresses[addr] = false;
+        emit BlacklistUpdated(addr, false);
+    }
+    
+    function emergencyPause() external onlyRole(EMERGENCY_ROLE) {
+        _pause();
+        emit EmergencyAction("PAUSE", msg.sender, block.timestamp);
+        
+        emit SecurityAlert(
+            "EMERGENCY_PAUSE",
+            msg.sender,
+            "Contract paused due to emergency",
+            block.timestamp
+        );
+    }
+    
+    function emergencyUnpause() external onlyRole(EMERGENCY_ROLE) {
+        _unpause();
+        emit EmergencyAction("UNPAUSE", msg.sender, block.timestamp);
+    }
+    
+    function createMultiSigOperation(
+        bytes32 opHash,
+        bytes calldata data,
+        uint256 deadline
+    ) external onlyTrustedAdmin {
+        require(multiSigOps[opHash].operationHash == bytes32(0), "Operation exists");
+        require(deadline > block.timestamp, "Invalid deadline");
+        
+        multiSigOps[opHash] = MultiSigOperation({
+            operationHash: opHash,
+            signers: new address[](0),
+            requiredSigs: REQUIRED_SIGNATURES,
+            deadline: deadline,
+            executed: false,
+            data: data
+        });
+        
+        emit MultiSigOperationCreated(opHash, msg.sender);
+    }
+    
+    function signMultiSigOperation(bytes32 opHash) external onlyTrustedAdmin {
+        MultiSigOperation storage op = multiSigOps[opHash];
+        require(op.operationHash != bytes32(0), "Operation not found");
+        require(!hasSigned[opHash][msg.sender], "Already signed");
+        require(!op.executed, "Already executed");
+        require(block.timestamp <= op.deadline, "Operation expired");
+        
+        hasSigned[opHash][msg.sender] = true;
+        op.signers.push(msg.sender);
+        
+        emit MultiSigOperationSigned(opHash, msg.sender);
+    }
+    
+    function executeMultiSigOperation(bytes32 opHash) external onlyTrustedAdmin multiSigProtected(opHash) {
+        MultiSigOperation storage op = multiSigOps[opHash];
+        op.executed = true;
+        
+        (bool success,) = address(this).call(op.data);
+        require(success, "MultiSig operation failed");
+        
+        emit MultiSigOperationExecuted(opHash);
+    }
+    
+    function secureWithdrawTokens(
+        address token,
+        uint256 amount,
+        bytes32 operation
+    ) external onlyTrustedAdmin timelockProtected(operation) {
+        require(token == address(maoToken) || token == address(piToken), "Invalid token");
+        require(amount > 0, "Invalid amount");
+        
+        uint256 today = block.timestamp / 1 days;
+        uint256 thisWeek = block.timestamp / 1 weeks;
+        
+        require(
+            dailyWithdrawn[msg.sender][today] + amount <= dailyWithdrawLimit,
+            "Daily limit exceeded"
+        );
+        require(
+            weeklyWithdrawn[msg.sender][thisWeek] + amount <= weeklyWithdrawLimit,
+            "Weekly limit exceeded"
+        );
+        require(amount <= maxSingleWithdraw, "Single withdraw limit exceeded");
+        
+        dailyWithdrawn[msg.sender][today] += amount;
+        weeklyWithdrawn[msg.sender][thisWeek] += amount;
+        
+        IERC20(token).transfer(msg.sender, amount);
+        executedOperations[operation] = true;
+        
+        emit SecurityAlert(
+            "SECURE_WITHDRAWAL",
+            msg.sender,
+            "Tokens withdrawn with full security checks",
+            block.timestamp
+        );
+    }
+    
+    function getPlayerHistory(address player) external view returns (GameRecord[] memory) {
+        return playerHistory[player];
+    }
+    
+    function getGameStats(uint8 tokenType) external view returns (GameStats memory) {
+        return gameStats[tokenType];
+    }
+    
+    function getContractBalance(address token) external view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
+    }
+    
+    function isAddressSafe(address addr) external view returns (bool) {
+        return !blacklistedAddresses[addr] && addr != address(0);
+    }
+    
+    function getMultiSigOperation(bytes32 opHash) external view returns (MultiSigOperation memory) {
+        return multiSigOps[opHash];
+    }
+    
+    function _generateRandomSeed() private view returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(
+            block.timestamp,
+            block.difficulty,
+            msg.sender,
+            blockhash(block.number - 1)
+        )));
+    }
+    
+    function _calculateReward(uint256 randomSeed, uint8 tokenType) private view returns (uint256 rewardAmount, uint8 rewardLevel, bool isWin) {
+        uint256 chance = randomSeed % 100;
+        
+        if (chance < 30) {
+            isWin = true;
+            
+            if (chance < 1) {
+                rewardLevel = 4;
+                rewardAmount = tokenType == 0 ? 10000 * 10**18 : 50000 * 10**18;
+            } else if (chance < 5) {
+                rewardLevel = 3;
+                rewardAmount = tokenType == 0 ? 2000 * 10**18 : 10000 * 10**18;
+            } else if (chance < 15) {
+                rewardLevel = 2;
+                rewardAmount = tokenType == 0 ? 500 * 10**18 : 2500 * 10**18;
+            } else {
+                rewardLevel = 1;
+                rewardAmount = tokenType == 0 ? 150 * 10**18 : 1500 * 10**18;
+            }
+        } else {
+            isWin = false;
+            rewardLevel = 0;
+            rewardAmount = 0;
+        }
+    }
+    
+    function _recordGame(
+        address player,
+        uint8 tokenType,
+        uint256 betAmount,
+        uint256 rewardAmount,
+        uint8 rewardLevel,
+        uint256 randomSeed
+    ) private {
+        GameRecord memory record = GameRecord({
+            player: player,
+            tokenType: tokenType,
+            betAmount: betAmount,
+            rewardAmount: rewardAmount,
+            rewardLevel: rewardLevel,
+            timestamp: block.timestamp,
+            randomSeed: randomSeed,
+            wasProtected: true
+        });
+        
+        playerHistory[player].push(record);
+        
+        GameStats storage stats = gameStats[tokenType];
+        stats.totalGames++;
+        stats.totalBets += betAmount;
+        
+        if (rewardAmount > 0) {
+            stats.totalWins++;
+            stats.totalRewards += rewardAmount;
+        }
+    }
+    
+    function emergencyWithdraw(address token, uint256 amount) external onlyRole(EMERGENCY_ROLE) whenPaused {
+        require(token == address(maoToken) || token == address(piToken), "Invalid token");
+        IERC20(token).transfer(msg.sender, amount);
+        
+        emit EmergencyAction("EMERGENCY_WITHDRAW", msg.sender, block.timestamp);
+        
+        emit SecurityAlert(
+            "EMERGENCY_WITHDRAWAL",
+            msg.sender,
+            "Emergency withdrawal executed",
+            block.timestamp
+        );
+    }
+    
+    receive() external payable {
+        revert("Contract does not accept ETH");
+    }
+}`;
+
+        let provider, signer, contract;
+
+        async function startAutoDeploy() {
+            const statusDiv = document.getElementById('status');
+            const progressDiv = document.getElementById('progress');
+            const deployBtn = document.getElementById('deployBtn');
+            const resultDiv = document.getElementById('result');
+            
+            deployBtn.disabled = true;
+            progressDiv.style.display = 'block';
+            
+            try {
+                // 步骤1: 检测钱包环境
+                updateStep(1, 'current');
+                statusDiv.className = 'status waiting';
+                statusDiv.textContent = '🔍 检测钱包环境...';
+                
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('未检测到钱包，请安装MetaMask或TP钱包');
+                }
+                
+                await sleep(1000);
+                updateStep(1, 'completed');
+                
+                // 步骤2: 添加AlveyChain网络
+                updateStep(2, 'current');
+                statusDiv.textContent = '🌐 添加AlveyChain网络...';
+                
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0xED5',
+                            chainName: 'AlveyChain',
+                            nativeCurrency: {
+                                name: 'ALV',
+                                symbol: 'ALV',
+                                decimals: 18
+                            },
+                            rpcUrls: ['https://elves-core2.alvey.io'],
+                            blockExplorerUrls: ['https://alveyscan.com']
+                        }]
+                    });
+                } catch (error) {
+                    console.log('网络可能已存在，继续...');
+                }
+                
+                await sleep(1000);
+                updateStep(2, 'completed');
+                
+                // 步骤3: 连接钱包
+                updateStep(3, 'current');
+                statusDiv.textContent = '🔗 连接钱包...';
+                
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                
+                const network = await provider.getNetwork();
+                if (network.chainId !== 3797) {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: '0xED5' }]
+                    });
+                }
+                
+                await sleep(1000);
+                updateStep(3, 'completed');
+                
+                // 步骤4: 准备合约代码
+                updateStep(4, 'current');
+                statusDiv.textContent = '📝 准备合约代码...';
+                
+                const contractFactory = new ethers.ContractFactory(
+                    ['constructor(address,address,address[],address)'],
+                    CONTRACT_CODE,
+                    signer
+                );
+                
+                await sleep(1000);
+                updateStep(4, 'completed');
+                
+                // 步骤5: 部署合约
+                updateStep(5, 'current');
+                statusDiv.textContent = '🚀 部署合约中...';
+                
+                const deployParams = [
+                    CONFIG.maoToken,
+                    CONFIG.piToken,
+                    CONFIG.admins,
+                    CONFIG.trustedOwner
+                ];
+                
+                contract = await contractFactory.deploy(...deployParams);
+                await contract.deployed();
+                
+                await sleep(2000);
+                updateStep(5, 'completed');
+                
+                // 步骤6: 验证部署
+                updateStep(6, 'current');
+                statusDiv.textContent = '✅ 验证部署...';
+                
+                const contractAddress = contract.address;
+                const owner = await contract.owner();
+                
+                await sleep(1000);
+                updateStep(6, 'completed');
+                
+                // 部署成功
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '🎉 部署成功！';
+                
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+🎉 MAO游戏合约部署成功！
+
+📋 合约信息：
+合约地址: ${contractAddress}
+部署者: ${await signer.getAddress()}
+主管理员: ${owner}
+
+🔧 合约配置：
+MAO代币: ${CONFIG.maoToken}
+PI代币: ${CONFIG.piToken}
+管理员数量: ${CONFIG.admins.length}
+
+🌐 网络信息：
+网络名称: AlveyChain
+链ID: 3797
+区块浏览器: https://alveyscan.com/address/${contractAddress}
+
+📱 下一步操作：
+1. 向合约充值MAO和PI代币
+2. 更新游戏前端配置
+3. 开始游戏测试
+
+<button onclick="copyContractInfo('${contractAddress}')" style="background: #2196F3; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin: 10px; font-size: 14px; font-weight: bold;">📋 复制合约地址</button>
+                `;
+                
+            } catch (error) {
+                console.error('部署失败:', error);
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 部署失败: ${error.message}`;
+                
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+❌ 自动部署失败
+
+错误信息: ${error.message}
+
+🔧 解决方案：
+1. 确保钱包已连接
+2. 确保钱包中有足够的ALV代币支付Gas费
+3. 尝试手动部署
+
+📋 手动部署参数：
+"${CONFIG.maoToken}","${CONFIG.piToken}",[${CONFIG.admins.map(addr => `"${addr}"`).join(',')}],"${CONFIG.trustedOwner}"
+                `;
+            }
+            
+            deployBtn.disabled = false;
+        }
+
+        function updateStep(stepNum, status) {
+            const step = document.getElementById(`step${stepNum}`);
+            step.className = `step ${status}`;
+        }
+
+        function copyContractInfo(address) {
+            navigator.clipboard.writeText(address).then(() => {
+                alert('✅ 合约地址已复制到剪贴板！');
+            });
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html> 
+ 
+ 
+ 
+ 
+ 
+ 

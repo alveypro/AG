@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易状态检查</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .pending {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 交易状态检查工具</h1>
+        <p>检查你的合约部署交易状态</p>
+        
+        <div class="status">
+            <h3>当前状态</h3>
+            <div id="currentStatus" class="pending">
+                ⏳ 交易状态: Pending (等待确认中...)
+            </div>
+        </div>
+        
+        <div class="status">
+            <h3>网络信息</h3>
+            <button onclick="checkNetwork()">检查网络连接</button>
+            <button onclick="checkBalance()">检查余额</button>
+            <div id="networkResult" class="result"></div>
+        </div>
+        
+        <div class="status">
+            <h3>交易哈希检查</h3>
+            <input type="text" id="txHash" placeholder="输入交易哈希 (可选)">
+            <button onclick="checkTransaction()">检查交易状态</button>
+            <div id="txResult" class="result"></div>
+        </div>
+        
+        <div class="status">
+            <h3>解决方案</h3>
+            <button onclick="increaseGas()">增加Gas限制</button>
+            <button onclick="switchRPC()">更换RPC节点</button>
+            <div id="solutionResult" class="result"></div>
+        </div>
+        
+        <div class="status">
+            <h3>自动监控</h3>
+            <button onclick="startMonitoring()">开始监控</button>
+            <button onclick="stopMonitoring()">停止监控</button>
+            <div id="monitorResult" class="result"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script>
+        let provider, signer, monitoring = false;
+        
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    alert('请安装MetaMask!');
+                    return;
+                }
+                
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                
+                return true;
+            } catch (error) {
+                console.error('连接失败:', error);
+                return false;
+            }
+        }
+        
+        async function checkNetwork() {
+            const resultDiv = document.getElementById('networkResult');
+            
+            try {
+                if (!await connectWallet()) {
+                    resultDiv.innerHTML = '❌ 无法连接钱包';
+                    return;
+                }
+                
+                const network = await provider.getNetwork();
+                const address = await signer.getAddress();
+                const balance = await provider.getBalance(address);
+                
+                resultDiv.innerHTML = 
+                    `✅ 网络连接正常\n` +
+                    `网络: ${network.name} (${network.chainId})\n` +
+                    `地址: ${address}\n` +
+                    `余额: ${ethers.utils.formatEther(balance)} ALV`;
+                    
+            } catch (error) {
+                resultDiv.innerHTML = `❌ 检查失败: ${error.message}`;
+            }
+        }
+        
+        async function checkBalance() {
+            const resultDiv = document.getElementById('networkResult');
+            
+            try {
+                if (!await connectWallet()) {
+                    resultDiv.innerHTML = '❌ 无法连接钱包';
+                    return;
+                }
+                
+                const address = await signer.getAddress();
+                const balance = await provider.getBalance(address);
+                const gasPrice = await provider.getGasPrice();
+                
+                resultDiv.innerHTML = 
+                    `💰 余额信息\n` +
+                    `地址: ${address}\n` +
+                    `余额: ${ethers.utils.formatEther(balance)} ALV\n` +
+                    `Gas价格: ${ethers.utils.formatUnits(gasPrice, 'gwei')} Gwei`;
+                    
+            } catch (error) {
+                resultDiv.innerHTML = `❌ 检查失败: ${error.message}`;
+            }
+        }
+        
+        async function checkTransaction() {
+            const txHash = document.getElementById('txHash').value;
+            const resultDiv = document.getElementById('txResult');
+            
+            if (!txHash) {
+                resultDiv.innerHTML = '⚠️ 请输入交易哈希';
+                return;
+            }
+            
+            try {
+                if (!await connectWallet()) {
+                    resultDiv.innerHTML = '❌ 无法连接钱包';
+                    return;
+                }
+                
+                const tx = await provider.getTransaction(txHash);
+                const receipt = await provider.getTransactionReceipt(txHash);
+                
+                if (!tx) {
+                    resultDiv.innerHTML = '❌ 交易不存在';
+                    return;
+                }
+                
+                let status = '⏳ Pending';
+                if (receipt) {
+                    status = receipt.status === 1 ? '✅ Success' : '❌ Failed';
+                }
+                
+                resultDiv.innerHTML = 
+                    `📋 交易信息\n` +
+                    `哈希: ${txHash}\n` +
+                    `状态: ${status}\n` +
+                    `Gas限制: ${tx.gasLimit.toString()}\n` +
+                    `Gas价格: ${ethers.utils.formatUnits(tx.gasPrice, 'gwei')} Gwei`;
+                    
+            } catch (error) {
+                resultDiv.innerHTML = `❌ 检查失败: ${error.message}`;
+            }
+        }
+        
+        function increaseGas() {
+            const resultDiv = document.getElementById('solutionResult');
+            resultDiv.innerHTML = 
+                `💡 增加Gas限制建议\n` +
+                `1. 在Remix IDE中将Gas Limit从3000000增加到5000000\n` +
+                `2. 重新部署合约\n` +
+                `3. 如果还是pending，尝试等待更长时间`;
+        }
+        
+        function switchRPC() {
+            const resultDiv = document.getElementById('solutionResult');
+            resultDiv.innerHTML = 
+                `🔄 更换RPC节点\n` +
+                `备用RPC节点:\n` +
+                `- https://alveychain-rpc.com\n` +
+                `- https://rpc.alvey.org\n\n` +
+                `在MetaMask中更换RPC URL后重试`;
+        }
+        
+        async function startMonitoring() {
+            if (monitoring) return;
+            
+            monitoring = true;
+            const resultDiv = document.getElementById('monitorResult');
+            resultDiv.innerHTML = '🔄 开始监控网络状态...';
+            
+            let count = 0;
+            const interval = setInterval(async () => {
+                if (!monitoring) {
+                    clearInterval(interval);
+                    return;
+                }
+                
+                count++;
+                try {
+                    if (await connectWallet()) {
+                        const network = await provider.getNetwork();
+                        const blockNumber = await provider.getBlockNumber();
+                        
+                        resultDiv.innerHTML = 
+                            `📊 监控中... (${count}s)\n` +
+                            `网络: ${network.name}\n` +
+                            `最新区块: ${blockNumber}\n` +
+                            `状态: 网络正常`;
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `❌ 监控错误: ${error.message}`;
+                }
+            }, 5000);
+        }
+        
+        function stopMonitoring() {
+            monitoring = false;
+            document.getElementById('monitorResult').innerHTML = '⏹️ 监控已停止';
+        }
+        
+        // 自动连接
+        window.addEventListener('load', connectWallet);
+    </script>
+</body>
+</html> 
+ 
+ 
+ 

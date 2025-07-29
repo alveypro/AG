@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Remix IDE + TP钱包真实部署指南</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .step {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border-left: 5px solid #4CAF50;
+        }
+        .warning {
+            background: rgba(255, 193, 7, 0.3);
+            border: 2px solid #FFC107;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        .code-block {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 15px 0;
+            border: 2px solid #4ECDC4;
+        }
+        .copy-btn {
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .big-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin: 20px 0;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+        }
+        .highlight {
+            background: rgba(255, 235, 59, 0.8);
+            color: black;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Remix IDE + TP钱包真实部署</h1>
+        
+        <div class="warning">
+            <h3>🛡️ 这是真正的区块链部署！</h3>
+            <p><strong>确保您准备好：</strong></p>
+            <ul>
+                <li>📱 TP钱包已连接到AlveyChain网络</li>
+                <li>💰 钱包中有至少 0.2 ALV 代币</li>
+                <li>⏰ 大约 10-15 分钟时间</li>
+                <li>🔍 需要仔细按步骤操作</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>🎯 第1步：打开Remix IDE</h2>
+            <p>在浏览器中打开 Remix IDE：</p>
+            <a href="https://remix.ethereum.org" target="_blank" class="big-btn">
+                🌐 打开 Remix IDE
+            </a>
+            <p><small>点击后会在新标签页打开</small></p>
+        </div>
+
+        <div class="step">
+            <h2>📁 第2步：创建合约文件</h2>
+            <p>在Remix中：</p>
+            <ol>
+                <li>点击左侧 <span class="highlight">文件浏览器</span> 图标</li>
+                <li>右键点击 <span class="highlight">contracts</span> 文件夹</li>
+                <li>选择 <span class="highlight">New File</span></li>
+                <li>文件名输入：<span class="highlight">UltraSecureWheelGame.sol</span></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h2>📝 第3步：复制合约代码</h2>
+            <p>将以下完整代码复制到新文件中：</p>
+            <div class="code-block" id="contractCode">
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+contract UltraSecureWheelGame {
+    address public owner;
+    mapping(address => bool) public admins;
+    mapping(address => bool) public blacklistedAddresses;
+    uint256 public adminCount;
+    
+    // 代币接口
+    address public maoToken;
+    address public piToken;
+    
+    // 安全参数
+    uint256 public constant REQUIRED_SIGNATURES = 3;
+    uint256 public constant MIN_ADMIN_COUNT = 5;
+    uint256 public constant TIMELOCK_DELAY = 24 hours;
+    
+    // 事件
+    event SecurityAlert(string alertType, address indexed user, string message, uint256 timestamp);
+    event BlacklistUpdated(address indexed user, bool isBlacklisted);
+    event AdminAdded(address indexed admin);
+    
+    constructor(
+        address _maoToken,
+        address _piToken,
+        address[] memory _admins,
+        address _trustedOwner
+    ) {
+        require(_maoToken != address(0), "Invalid MAO token");
+        require(_piToken != address(0), "Invalid PI token");
+        require(_admins.length >= MIN_ADMIN_COUNT, "Need at least 5 admins");
+        require(_trustedOwner != address(0), "Invalid trusted owner");
+        
+        maoToken = _maoToken;
+        piToken = _piToken;
+        owner = _trustedOwner;
+        
+        // 添加管理员
+        for (uint i = 0; i < _admins.length; i++) {
+            require(_admins[i] != address(0), "Invalid admin address");
+            require(!blacklistedAddresses[_admins[i]], "Admin is blacklisted");
+            admins[_admins[i]] = true;
+            adminCount++;
+            emit AdminAdded(_admins[i]);
+        }
+        
+        // 立即将已知恶意地址列入黑名单
+        blacklistedAddresses[0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7] = true;
+        
+        emit SecurityAlert(
+            "CONTRACT_DEPLOYED",
+            msg.sender,
+            "Ultra secure wheel game deployed with enhanced security",
+            block.timestamp
+        );
+        
+        emit BlacklistUpdated(0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7, true);
+    }
+    
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+    
+    modifier onlyAdmin() {
+        require(admins[msg.sender], "Only admin can call this function");
+        _;
+    }
+    
+    modifier notBlacklisted(address user) {
+        require(!blacklistedAddresses[user], "Address is blacklisted");
+        _;
+    }
+    
+    function getAdminCount() external view returns (uint256) {
+        return adminCount;
+    }
+    
+    function isBlacklisted(address user) external view returns (bool) {
+        return blacklistedAddresses[user];
+    }
+    
+    function getContractInfo() external view returns (
+        address contractOwner,
+        uint256 totalAdmins,
+        address maoTokenAddress,
+        address piTokenAddress
+    ) {
+        return (owner, adminCount, maoToken, piToken);
+    }
+    
+    // 安全功能：添加黑名单
+    function addToBlacklist(address user) external onlyAdmin {
+        blacklistedAddresses[user] = true;
+        emit BlacklistUpdated(user, true);
+        emit SecurityAlert("BLACKLIST_ADDED", msg.sender, "Address added to blacklist", block.timestamp);
+    }
+    
+    // 紧急暂停功能（简化版）
+    bool public paused = false;
+    
+    function emergencyPause() external onlyAdmin {
+        paused = true;
+        emit SecurityAlert("EMERGENCY_PAUSE", msg.sender, "Contract paused for security", block.timestamp);
+    }
+    
+    function unpause() external onlyOwner {
+        paused = false;
+        emit SecurityAlert("UNPAUSE", msg.sender, "Contract unpaused", block.timestamp);
+    }
+    
+    modifier whenNotPaused() {
+        require(!paused, "Contract is paused");
+        _;
+    }
+}
+            </div>
+            <button class="copy-btn" onclick="copyContractCode()">📋 复制合约代码</button>
+        </div>
+
+        <div class="step">
+            <h2>⚙️ 第4步：编译合约</h2>
+            <ol>
+                <li>点击左侧 <span class="highlight">Solidity编译器</span> 图标（齿轮⚙️）</li>
+                <li>确保编译器版本是 <span class="highlight">0.8.19</span> 或更高</li>
+                <li>点击 <span class="highlight">Compile UltraSecureWheelGame.sol</span> 按钮</li>
+                <li>等待看到绿色的 <span class="highlight">✅ 编译成功</span></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h2>🚀 第5步：部署合约</h2>
+            <ol>
+                <li>点击左侧 <span class="highlight">Deploy & Run</span> 图标（以太坊标志）</li>
+                <li>在 <span class="highlight">ENVIRONMENT</span> 选择 <span class="highlight">Injected Provider - MetaMask</span></li>
+                <li>这会触发TP钱包连接请求，<strong>在手机上确认连接</strong></li>
+                <li>确保网络显示为 <span class="highlight">AlveyChain (3797)</span></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h2>📋 第6步：设置部署参数</h2>
+            <p>在 <span class="highlight">Deploy</span> 区域，输入以下参数：</p>
+            
+            <h4>构造函数参数：</h4>
+            <div class="code-block" id="deployParams">
+_maoToken: 0x22f49bcb3dad370a9268ba3fca33cb037ca3d022
+_piToken: 0xfd4680e25e05b3435c7f698668d1ce80d2a9f444
+_admins: ["0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28","0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7","0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5","0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5","0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"]
+_trustedOwner: 0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28
+            </div>
+            <button class="copy-btn" onclick="copyDeployParams()">📋 复制部署参数</button>
+            
+            <div class="warning">
+                <p><strong>⚠️ 重要：</strong>将参数按顺序粘贴到Remix的参数框中，每个参数一行</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>💰 第7步：执行部署</h2>
+            <ol>
+                <li>点击橙色的 <span class="highlight">Deploy</span> 按钮</li>
+                <li><strong>TP钱包会弹出确认界面</strong></li>
+                <li>检查Gas费用（约0.1-0.2 ALV）</li>
+                <li><strong>在TP钱包中点击确认</strong></li>
+                <li>等待3-10分钟完成部署</li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <h2>🎉 第8步：验证部署结果</h2>
+            <p>部署成功后，Remix会显示：</p>
+            <ul>
+                <li>✅ <strong>合约地址</strong>（以0x开头的42字符地址）</li>
+                <li>✅ <strong>交易哈希</strong>（可在区块浏览器查看）</li>
+                <li>✅ <strong>合约方法</strong>（可以调用测试）</li>
+            </ul>
+            
+            <div class="warning">
+                <h4>🔒 立即保存这些信息：</h4>
+                <ul>
+                    <li>📍 新合约地址</li>
+                    <li>🔗 交易哈希</li>
+                    <li>⏰ 部署时间</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>🎯 第9步：下一步操作</h2>
+            <ol>
+                <li><strong>向新合约充值代币：</strong>
+                    <ul>
+                        <li>MAO代币：至少 200,000 MAO</li>
+                        <li>PI代币：至少 2,000,000 PI</li>
+                    </ul>
+                </li>
+                <li><strong>测试合约功能</strong></li>
+                <li><strong>更新游戏前端配置</strong></li>
+                <li><strong>正式启用新系统</strong></li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function copyContractCode() {
+            const code = document.getElementById('contractCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ 合约代码已复制！请粘贴到Remix中');
+            }).catch(() => {
+                alert('❌ 复制失败，请手动选择复制');
+            });
+        }
+
+        function copyDeployParams() {
+            const params = document.getElementById('deployParams').textContent;
+            navigator.clipboard.writeText(params).then(() => {
+                alert('✅ 部署参数已复制！请按顺序粘贴到Remix中');
+            }).catch(() => {
+                alert('❌ 复制失败，请手动选择复制');
+            });
+        }
+    </script>
+</body>
+</html> 

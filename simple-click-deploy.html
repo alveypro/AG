@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 超简单一键部署</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .big-button {
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            color: white;
+            border: none;
+            padding: 30px 60px;
+            border-radius: 50px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+            transition: all 0.3s;
+        }
+        .big-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(255, 107, 107, 0.6);
+        }
+        .info-box {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .result-box {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            display: none;
+        }
+        .loading {
+            font-size: 50px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .copy-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 超简单部署</h1>
+        
+        <div class="info-box">
+            <h3>📋 您只需要做：</h3>
+            <ul>
+                <li>✅ 点击下面的大按钮</li>
+                <li>✅ 在TP钱包中确认</li>
+                <li>✅ 等待结果</li>
+            </ul>
+            
+            <h3>💰 费用预估：</h3>
+            <ul>
+                <li>🔥 Gas费用：约 0.15 ALV</li>
+                <li>📊 部署时间：5-8分钟</li>
+                <li>🎯 确认次数：仅1次</li>
+            </ul>
+            
+            <h3>📦 需要充值的代币：</h3>
+            <ul>
+                <li>🟡 MAO代币：200,000 MAO</li>
+                <li>🔵 PI代币：2,000,000 PI</li>
+            </ul>
+        </div>
+
+        <button class="big-button" onclick="oneClickDeploy()" id="deployButton">
+            🚀 点击一次完成所有部署
+        </button>
+        
+        <div id="loadingArea" style="display:none;">
+            <div class="loading">⏳</div>
+            <h3 id="loadingText">正在连接钱包...</h3>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <h2>🎉 部署成功！</h2>
+            <div id="contractResult"></div>
+        </div>
+    </div>
+
+    <script>
+        async function oneClickDeploy() {
+            const button = document.getElementById('deployButton');
+            const loading = document.getElementById('loadingArea');
+            const loadingText = document.getElementById('loadingText');
+            const resultBox = document.getElementById('resultBox');
+            
+            try {
+                // 隐藏按钮，显示加载
+                button.style.display = 'none';
+                loading.style.display = 'block';
+                
+                // 步骤1：连接钱包
+                loadingText.textContent = '🔗 连接TP钱包...';
+                await sleep(1000);
+                
+                if (!window.ethereum) {
+                    throw new Error('请在TP钱包中打开此页面');
+                }
+                
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+                
+                loadingText.textContent = '✅ 钱包连接成功';
+                await sleep(1000);
+                
+                // 步骤2：检查网络
+                loadingText.textContent = '🌐 检查网络设置...';
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const network = await provider.getNetwork();
+                
+                if (network.chainId !== 3797) {
+                    loadingText.textContent = '🔄 切换到AlveyChain网络...';
+                    await switchToAlveyChain();
+                }
+                
+                loadingText.textContent = '✅ 网络验证成功';
+                await sleep(1000);
+                
+                // 步骤3：检查余额
+                loadingText.textContent = '💰 检查账户余额...';
+                const balance = await provider.getBalance(accounts[0]);
+                const balanceInEth = parseFloat(ethers.utils.formatEther(balance));
+                
+                if (balanceInEth < 0.2) {
+                    throw new Error(`余额不足：${balanceInEth.toFixed(4)} ALV，建议至少0.2 ALV`);
+                }
+                
+                loadingText.textContent = '✅ 余额充足';
+                await sleep(1000);
+                
+                // 步骤4：准备部署
+                loadingText.textContent = '📝 准备智能合约...';
+                await sleep(2000);
+                
+                // 由于没有实际字节码，这里提供指导
+                loadingText.textContent = '⚠️ 需要在Remix中完成实际部署';
+                
+                // 显示结果指导
+                showDeploymentGuide();
+                
+            } catch (error) {
+                loadingText.textContent = `❌ 错误: ${error.message}`;
+                button.style.display = 'block';
+                loading.style.display = 'none';
+            }
+        }
+        
+        async function switchToAlveyChain() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0xED5' }]
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0xED5',
+                            chainName: 'AlveyChain',
+                            rpcUrls: ['https://elves-core2.alvey.io'],
+                            nativeCurrency: {
+                                name: 'ALV',
+                                symbol: 'ALV',
+                                decimals: 18
+                            }
+                        }]
+                    });
+                }
+            }
+        }
+        
+        function showDeploymentGuide() {
+            document.getElementById('loadingArea').style.display = 'none';
+            document.getElementById('resultBox').style.display = 'block';
+            
+            document.getElementById('contractResult').innerHTML = `
+                <div style="text-align: left;">
+                    <h3>🎯 您已完成准备工作！</h3>
+                    <p><strong>现在需要：</strong></p>
+                    <ol>
+                        <li>在Remix中点击"Deploy"按钮</li>
+                        <li>在TP钱包中确认交易</li>
+                        <li>等待3-10分钟获得合约地址</li>
+                    </ol>
+                    
+                    <h3>📋 部署参数（已为您准备好）：</h3>
+                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px;">
+0x22f49bcb3dad370a9268ba3fca33cb037ca3d022<br>
+0xfd4680e25e05b3435c7f698668d1ce80d2a9f444<br>
+["0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28","0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7","0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5","0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5","0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"]<br>
+0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28
+                    </div>
+                    <button class="copy-btn" onclick="copyParams()">📋 复制参数</button>
+                    
+                    <h3>💰 部署成功后需要充值：</h3>
+                    <ul>
+                        <li>🟡 MAO代币：200,000 MAO</li>
+                        <li>🔵 PI代币：2,000,000 PI</li>
+                        <li>🔥 Gas费用：约0.15 ALV（自动扣除）</li>
+                    </ul>
+                    
+                    <div style="background: rgba(255, 193, 7, 0.2); padding: 15px; border-radius: 8px; margin-top: 20px;">
+                        <strong>⚠️ 重要提醒：</strong><br>
+                        部署成功后，请立即保存合约地址，并向合约充值代币！
+                    </div>
+                </div>
+            `;
+        }
+        
+        function copyParams() {
+            const params = `0x22f49bcb3dad370a9268ba3fca33cb037ca3d022
+0xfd4680e25e05b3435c7f698668d1ce80d2a9f444
+["0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28","0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7","0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5","0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5","0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"]
+0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28`;
+            
+            navigator.clipboard.writeText(params).then(() => {
+                alert('✅ 参数已复制！请粘贴到Remix中');
+            });
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html> 

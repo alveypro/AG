@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查询合约钱包地址</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 查询合约钱包地址</h1>
+            <p>查询已部署游戏合约的所有钱包地址和配置信息</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn" onclick="connectWallet()">连接钱包</button>
+            <button class="btn" onclick="queryAddresses()">查询地址</button>
+            <button class="btn" onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        const CONTRACT_ADDRESS = "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913";
+        
+        const CONTRACT_ABI = [
+            "function marketingWallet() view returns (address)",
+            "function prizePoolWallet() view returns (address)",
+            "function profitWallet() view returns (address)",
+            "function maoToken() view returns (address)",
+            "function piToken() view returns (address)",
+            "function adminCount() view returns (uint256)",
+            "function maoGameCost() view returns (uint256)",
+            "function piGameCost() view returns (uint256)",
+            "function BURN_PERCENTAGE() view returns (uint256)",
+            "function MARKETING_PERCENTAGE() view returns (uint256)",
+            "function CONTRACT_PERCENTAGE() view returns (uint256)"
+        ];
+
+        async function connectWallet() {
+            try {
+                showResult("正在连接钱包...", "loading");
+                
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // 检查网络
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    if (chainId !== '0xed5') { // AlveyChain chainId = 3797 (0xed5)
+                        showResult("❌ 请切换到AlveyChain网络！\n当前网络ID: " + chainId + "\n需要网络ID: 0xed5 (3797)", "error");
+                        return;
+                    }
+                    
+                    web3 = new Web3(window.ethereum);
+                    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    showResult("✅ 钱包连接成功！\n当前地址: " + accounts[0], "success");
+                } else {
+                    showResult("❌ 请安装MetaMask钱包！", "error");
+                }
+            } catch (error) {
+                showResult("❌ 连接失败: " + error.message, "error");
+            }
+        }
+
+        async function queryAddresses() {
+            try {
+                if (!contract) {
+                    showResult("❌ 请先连接钱包！", "error");
+                    return;
+                }
+                
+                showResult("正在查询合约地址...", "loading");
+                
+                const result = [];
+                result.push("🔍 查询合约钱包地址");
+                result.push("📋 合约地址: " + CONTRACT_ADDRESS);
+                result.push("🌐 网络: AlveyChain");
+                result.push("");
+                
+                // 查询代币地址
+                result.push("🪙 代币地址:");
+                const maoToken = await contract.methods.maoToken().call();
+                const piToken = await contract.methods.piToken().call();
+                result.push("   MAO Token: " + maoToken);
+                result.push("   PI Token: " + piToken);
+                result.push("");
+                
+                // 查询钱包地址
+                result.push("💰 钱包地址:");
+                const marketingWallet = await contract.methods.marketingWallet().call();
+                const prizePoolWallet = await contract.methods.prizePoolWallet().call();
+                const profitWallet = await contract.methods.profitWallet().call();
+                result.push("   营销钱包: " + marketingWallet);
+                result.push("   奖金池钱包: " + prizePoolWallet);
+                result.push("   利润钱包: " + profitWallet);
+                result.push("");
+                
+                // 查询管理员信息
+                result.push("👥 管理员信息:");
+                const adminCount = await contract.methods.adminCount().call();
+                result.push("   管理员数量: " + adminCount);
+                result.push("");
+                
+                // 查询游戏配置
+                result.push("🎮 游戏配置:");
+                try {
+                    const maoGameCost = await contract.methods.maoGameCost().call();
+                    const piGameCost = await contract.methods.piGameCost().call();
+                    result.push("   MAO游戏费用: " + web3.utils.fromWei(maoGameCost, 'ether') + " MAO");
+                    result.push("   PI游戏费用: " + web3.utils.fromWei(piGameCost, 'ether') + " PI");
+                } catch (error) {
+                    result.push("   无法获取游戏费用配置");
+                }
+                
+                // 查询分配比例
+                try {
+                    const burnPercentage = await contract.methods.BURN_PERCENTAGE().call();
+                    const marketingPercentage = await contract.methods.MARKETING_PERCENTAGE().call();
+                    const contractPercentage = await contract.methods.CONTRACT_PERCENTAGE().call();
+                    result.push("   销毁比例: " + burnPercentage + "%");
+                    result.push("   营销比例: " + marketingPercentage + "%");
+                    result.push("   合约比例: " + contractPercentage + "%");
+                } catch (error) {
+                    result.push("   无法获取分配比例");
+                }
+                result.push("");
+                
+                result.push("✅ 查询完成！");
+                
+                showResult(result.join('\n'), "success");
+                
+            } catch (error) {
+                showResult("❌ 查询失败: " + error.message, "error");
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        // 页面加载时检查钱包连接
+        window.addEventListener('load', function() {
+            if (typeof window.ethereum !== 'undefined') {
+                showResult("✅ 检测到MetaMask钱包\n请点击'连接钱包'按钮开始查询", "success");
+            } else {
+                showResult("❌ 未检测到MetaMask钱包\n请安装MetaMask后刷新页面", "error");
+            }
+        });
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查询合约钱包地址</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 查询合约钱包地址</h1>
+            <p>查询已部署游戏合约的所有钱包地址和配置信息</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn" onclick="connectWallet()">连接钱包</button>
+            <button class="btn" onclick="queryAddresses()">查询地址</button>
+            <button class="btn" onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        const CONTRACT_ADDRESS = "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913";
+        
+        const CONTRACT_ABI = [
+            "function marketingWallet() view returns (address)",
+            "function prizePoolWallet() view returns (address)",
+            "function profitWallet() view returns (address)",
+            "function maoToken() view returns (address)",
+            "function piToken() view returns (address)",
+            "function adminCount() view returns (uint256)",
+            "function maoGameCost() view returns (uint256)",
+            "function piGameCost() view returns (uint256)",
+            "function BURN_PERCENTAGE() view returns (uint256)",
+            "function MARKETING_PERCENTAGE() view returns (uint256)",
+            "function CONTRACT_PERCENTAGE() view returns (uint256)"
+        ];
+
+        async function connectWallet() {
+            try {
+                showResult("正在连接钱包...", "loading");
+                
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // 检查网络
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    if (chainId !== '0xed5') { // AlveyChain chainId = 3797 (0xed5)
+                        showResult("❌ 请切换到AlveyChain网络！\n当前网络ID: " + chainId + "\n需要网络ID: 0xed5 (3797)", "error");
+                        return;
+                    }
+                    
+                    web3 = new Web3(window.ethereum);
+                    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    showResult("✅ 钱包连接成功！\n当前地址: " + accounts[0], "success");
+                } else {
+                    showResult("❌ 请安装MetaMask钱包！", "error");
+                }
+            } catch (error) {
+                showResult("❌ 连接失败: " + error.message, "error");
+            }
+        }
+
+        async function queryAddresses() {
+            try {
+                if (!contract) {
+                    showResult("❌ 请先连接钱包！", "error");
+                    return;
+                }
+                
+                showResult("正在查询合约地址...", "loading");
+                
+                const result = [];
+                result.push("🔍 查询合约钱包地址");
+                result.push("📋 合约地址: " + CONTRACT_ADDRESS);
+                result.push("🌐 网络: AlveyChain");
+                result.push("");
+                
+                // 查询代币地址
+                result.push("🪙 代币地址:");
+                const maoToken = await contract.methods.maoToken().call();
+                const piToken = await contract.methods.piToken().call();
+                result.push("   MAO Token: " + maoToken);
+                result.push("   PI Token: " + piToken);
+                result.push("");
+                
+                // 查询钱包地址
+                result.push("💰 钱包地址:");
+                const marketingWallet = await contract.methods.marketingWallet().call();
+                const prizePoolWallet = await contract.methods.prizePoolWallet().call();
+                const profitWallet = await contract.methods.profitWallet().call();
+                result.push("   营销钱包: " + marketingWallet);
+                result.push("   奖金池钱包: " + prizePoolWallet);
+                result.push("   利润钱包: " + profitWallet);
+                result.push("");
+                
+                // 查询管理员信息
+                result.push("👥 管理员信息:");
+                const adminCount = await contract.methods.adminCount().call();
+                result.push("   管理员数量: " + adminCount);
+                result.push("");
+                
+                // 查询游戏配置
+                result.push("🎮 游戏配置:");
+                try {
+                    const maoGameCost = await contract.methods.maoGameCost().call();
+                    const piGameCost = await contract.methods.piGameCost().call();
+                    result.push("   MAO游戏费用: " + web3.utils.fromWei(maoGameCost, 'ether') + " MAO");
+                    result.push("   PI游戏费用: " + web3.utils.fromWei(piGameCost, 'ether') + " PI");
+                } catch (error) {
+                    result.push("   无法获取游戏费用配置");
+                }
+                
+                // 查询分配比例
+                try {
+                    const burnPercentage = await contract.methods.BURN_PERCENTAGE().call();
+                    const marketingPercentage = await contract.methods.MARKETING_PERCENTAGE().call();
+                    const contractPercentage = await contract.methods.CONTRACT_PERCENTAGE().call();
+                    result.push("   销毁比例: " + burnPercentage + "%");
+                    result.push("   营销比例: " + marketingPercentage + "%");
+                    result.push("   合约比例: " + contractPercentage + "%");
+                } catch (error) {
+                    result.push("   无法获取分配比例");
+                }
+                result.push("");
+                
+                result.push("✅ 查询完成！");
+                
+                showResult(result.join('\n'), "success");
+                
+            } catch (error) {
+                showResult("❌ 查询失败: " + error.message, "error");
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        // 页面加载时检查钱包连接
+        window.addEventListener('load', function() {
+            if (typeof window.ethereum !== 'undefined') {
+                showResult("✅ 检测到MetaMask钱包\n请点击'连接钱包'按钮开始查询", "success");
+            } else {
+                showResult("❌ 未检测到MetaMask钱包\n请安装MetaMask后刷新页面", "error");
+            }
+        });
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查询合约钱包地址</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 查询合约钱包地址</h1>
+            <p>查询已部署游戏合约的所有钱包地址和配置信息</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn" onclick="connectWallet()">连接钱包</button>
+            <button class="btn" onclick="queryAddresses()">查询地址</button>
+            <button class="btn" onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        const CONTRACT_ADDRESS = "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913";
+        
+        const CONTRACT_ABI = [
+            "function marketingWallet() view returns (address)",
+            "function prizePoolWallet() view returns (address)",
+            "function profitWallet() view returns (address)",
+            "function maoToken() view returns (address)",
+            "function piToken() view returns (address)",
+            "function adminCount() view returns (uint256)",
+            "function maoGameCost() view returns (uint256)",
+            "function piGameCost() view returns (uint256)",
+            "function BURN_PERCENTAGE() view returns (uint256)",
+            "function MARKETING_PERCENTAGE() view returns (uint256)",
+            "function CONTRACT_PERCENTAGE() view returns (uint256)"
+        ];
+
+        async function connectWallet() {
+            try {
+                showResult("正在连接钱包...", "loading");
+                
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // 检查网络
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    if (chainId !== '0xed5') { // AlveyChain chainId = 3797 (0xed5)
+                        showResult("❌ 请切换到AlveyChain网络！\n当前网络ID: " + chainId + "\n需要网络ID: 0xed5 (3797)", "error");
+                        return;
+                    }
+                    
+                    web3 = new Web3(window.ethereum);
+                    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    showResult("✅ 钱包连接成功！\n当前地址: " + accounts[0], "success");
+                } else {
+                    showResult("❌ 请安装MetaMask钱包！", "error");
+                }
+            } catch (error) {
+                showResult("❌ 连接失败: " + error.message, "error");
+            }
+        }
+
+        async function queryAddresses() {
+            try {
+                if (!contract) {
+                    showResult("❌ 请先连接钱包！", "error");
+                    return;
+                }
+                
+                showResult("正在查询合约地址...", "loading");
+                
+                const result = [];
+                result.push("🔍 查询合约钱包地址");
+                result.push("📋 合约地址: " + CONTRACT_ADDRESS);
+                result.push("🌐 网络: AlveyChain");
+                result.push("");
+                
+                // 查询代币地址
+                result.push("🪙 代币地址:");
+                const maoToken = await contract.methods.maoToken().call();
+                const piToken = await contract.methods.piToken().call();
+                result.push("   MAO Token: " + maoToken);
+                result.push("   PI Token: " + piToken);
+                result.push("");
+                
+                // 查询钱包地址
+                result.push("💰 钱包地址:");
+                const marketingWallet = await contract.methods.marketingWallet().call();
+                const prizePoolWallet = await contract.methods.prizePoolWallet().call();
+                const profitWallet = await contract.methods.profitWallet().call();
+                result.push("   营销钱包: " + marketingWallet);
+                result.push("   奖金池钱包: " + prizePoolWallet);
+                result.push("   利润钱包: " + profitWallet);
+                result.push("");
+                
+                // 查询管理员信息
+                result.push("👥 管理员信息:");
+                const adminCount = await contract.methods.adminCount().call();
+                result.push("   管理员数量: " + adminCount);
+                result.push("");
+                
+                // 查询游戏配置
+                result.push("🎮 游戏配置:");
+                try {
+                    const maoGameCost = await contract.methods.maoGameCost().call();
+                    const piGameCost = await contract.methods.piGameCost().call();
+                    result.push("   MAO游戏费用: " + web3.utils.fromWei(maoGameCost, 'ether') + " MAO");
+                    result.push("   PI游戏费用: " + web3.utils.fromWei(piGameCost, 'ether') + " PI");
+                } catch (error) {
+                    result.push("   无法获取游戏费用配置");
+                }
+                
+                // 查询分配比例
+                try {
+                    const burnPercentage = await contract.methods.BURN_PERCENTAGE().call();
+                    const marketingPercentage = await contract.methods.MARKETING_PERCENTAGE().call();
+                    const contractPercentage = await contract.methods.CONTRACT_PERCENTAGE().call();
+                    result.push("   销毁比例: " + burnPercentage + "%");
+                    result.push("   营销比例: " + marketingPercentage + "%");
+                    result.push("   合约比例: " + contractPercentage + "%");
+                } catch (error) {
+                    result.push("   无法获取分配比例");
+                }
+                result.push("");
+                
+                result.push("✅ 查询完成！");
+                
+                showResult(result.join('\n'), "success");
+                
+            } catch (error) {
+                showResult("❌ 查询失败: " + error.message, "error");
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        // 页面加载时检查钱包连接
+        window.addEventListener('load', function() {
+            if (typeof window.ethereum !== 'undefined') {
+                showResult("✅ 检测到MetaMask钱包\n请点击'连接钱包'按钮开始查询", "success");
+            } else {
+                showResult("❌ 未检测到MetaMask钱包\n请安装MetaMask后刷新页面", "error");
+            }
+        });
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查询合约钱包地址</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 查询合约钱包地址</h1>
+            <p>查询已部署游戏合约的所有钱包地址和配置信息</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn" onclick="connectWallet()">连接钱包</button>
+            <button class="btn" onclick="queryAddresses()">查询地址</button>
+            <button class="btn" onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        const CONTRACT_ADDRESS = "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913";
+        
+        const CONTRACT_ABI = [
+            "function marketingWallet() view returns (address)",
+            "function prizePoolWallet() view returns (address)",
+            "function profitWallet() view returns (address)",
+            "function maoToken() view returns (address)",
+            "function piToken() view returns (address)",
+            "function adminCount() view returns (uint256)",
+            "function maoGameCost() view returns (uint256)",
+            "function piGameCost() view returns (uint256)",
+            "function BURN_PERCENTAGE() view returns (uint256)",
+            "function MARKETING_PERCENTAGE() view returns (uint256)",
+            "function CONTRACT_PERCENTAGE() view returns (uint256)"
+        ];
+
+        async function connectWallet() {
+            try {
+                showResult("正在连接钱包...", "loading");
+                
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // 检查网络
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    if (chainId !== '0xed5') { // AlveyChain chainId = 3797 (0xed5)
+                        showResult("❌ 请切换到AlveyChain网络！\n当前网络ID: " + chainId + "\n需要网络ID: 0xed5 (3797)", "error");
+                        return;
+                    }
+                    
+                    web3 = new Web3(window.ethereum);
+                    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    showResult("✅ 钱包连接成功！\n当前地址: " + accounts[0], "success");
+                } else {
+                    showResult("❌ 请安装MetaMask钱包！", "error");
+                }
+            } catch (error) {
+                showResult("❌ 连接失败: " + error.message, "error");
+            }
+        }
+
+        async function queryAddresses() {
+            try {
+                if (!contract) {
+                    showResult("❌ 请先连接钱包！", "error");
+                    return;
+                }
+                
+                showResult("正在查询合约地址...", "loading");
+                
+                const result = [];
+                result.push("🔍 查询合约钱包地址");
+                result.push("📋 合约地址: " + CONTRACT_ADDRESS);
+                result.push("🌐 网络: AlveyChain");
+                result.push("");
+                
+                // 查询代币地址
+                result.push("🪙 代币地址:");
+                const maoToken = await contract.methods.maoToken().call();
+                const piToken = await contract.methods.piToken().call();
+                result.push("   MAO Token: " + maoToken);
+                result.push("   PI Token: " + piToken);
+                result.push("");
+                
+                // 查询钱包地址
+                result.push("💰 钱包地址:");
+                const marketingWallet = await contract.methods.marketingWallet().call();
+                const prizePoolWallet = await contract.methods.prizePoolWallet().call();
+                const profitWallet = await contract.methods.profitWallet().call();
+                result.push("   营销钱包: " + marketingWallet);
+                result.push("   奖金池钱包: " + prizePoolWallet);
+                result.push("   利润钱包: " + profitWallet);
+                result.push("");
+                
+                // 查询管理员信息
+                result.push("👥 管理员信息:");
+                const adminCount = await contract.methods.adminCount().call();
+                result.push("   管理员数量: " + adminCount);
+                result.push("");
+                
+                // 查询游戏配置
+                result.push("🎮 游戏配置:");
+                try {
+                    const maoGameCost = await contract.methods.maoGameCost().call();
+                    const piGameCost = await contract.methods.piGameCost().call();
+                    result.push("   MAO游戏费用: " + web3.utils.fromWei(maoGameCost, 'ether') + " MAO");
+                    result.push("   PI游戏费用: " + web3.utils.fromWei(piGameCost, 'ether') + " PI");
+                } catch (error) {
+                    result.push("   无法获取游戏费用配置");
+                }
+                
+                // 查询分配比例
+                try {
+                    const burnPercentage = await contract.methods.BURN_PERCENTAGE().call();
+                    const marketingPercentage = await contract.methods.MARKETING_PERCENTAGE().call();
+                    const contractPercentage = await contract.methods.CONTRACT_PERCENTAGE().call();
+                    result.push("   销毁比例: " + burnPercentage + "%");
+                    result.push("   营销比例: " + marketingPercentage + "%");
+                    result.push("   合约比例: " + contractPercentage + "%");
+                } catch (error) {
+                    result.push("   无法获取分配比例");
+                }
+                result.push("");
+                
+                result.push("✅ 查询完成！");
+                
+                showResult(result.join('\n'), "success");
+                
+            } catch (error) {
+                showResult("❌ 查询失败: " + error.message, "error");
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        // 页面加载时检查钱包连接
+        window.addEventListener('load', function() {
+            if (typeof window.ethereum !== 'undefined') {
+                showResult("✅ 检测到MetaMask钱包\n请点击'连接钱包'按钮开始查询", "success");
+            } else {
+                showResult("❌ 未检测到MetaMask钱包\n请安装MetaMask后刷新页面", "error");
+            }
+        });
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查询合约钱包地址</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 查询合约钱包地址</h1>
+            <p>查询已部署游戏合约的所有钱包地址和配置信息</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn" onclick="connectWallet()">连接钱包</button>
+            <button class="btn" onclick="queryAddresses()">查询地址</button>
+            <button class="btn" onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        const CONTRACT_ADDRESS = "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913";
+        
+        const CONTRACT_ABI = [
+            "function marketingWallet() view returns (address)",
+            "function prizePoolWallet() view returns (address)",
+            "function profitWallet() view returns (address)",
+            "function maoToken() view returns (address)",
+            "function piToken() view returns (address)",
+            "function adminCount() view returns (uint256)",
+            "function maoGameCost() view returns (uint256)",
+            "function piGameCost() view returns (uint256)",
+            "function BURN_PERCENTAGE() view returns (uint256)",
+            "function MARKETING_PERCENTAGE() view returns (uint256)",
+            "function CONTRACT_PERCENTAGE() view returns (uint256)"
+        ];
+
+        async function connectWallet() {
+            try {
+                showResult("正在连接钱包...", "loading");
+                
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // 检查网络
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    if (chainId !== '0xed5') { // AlveyChain chainId = 3797 (0xed5)
+                        showResult("❌ 请切换到AlveyChain网络！\n当前网络ID: " + chainId + "\n需要网络ID: 0xed5 (3797)", "error");
+                        return;
+                    }
+                    
+                    web3 = new Web3(window.ethereum);
+                    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    showResult("✅ 钱包连接成功！\n当前地址: " + accounts[0], "success");
+                } else {
+                    showResult("❌ 请安装MetaMask钱包！", "error");
+                }
+            } catch (error) {
+                showResult("❌ 连接失败: " + error.message, "error");
+            }
+        }
+
+        async function queryAddresses() {
+            try {
+                if (!contract) {
+                    showResult("❌ 请先连接钱包！", "error");
+                    return;
+                }
+                
+                showResult("正在查询合约地址...", "loading");
+                
+                const result = [];
+                result.push("🔍 查询合约钱包地址");
+                result.push("📋 合约地址: " + CONTRACT_ADDRESS);
+                result.push("🌐 网络: AlveyChain");
+                result.push("");
+                
+                // 查询代币地址
+                result.push("🪙 代币地址:");
+                const maoToken = await contract.methods.maoToken().call();
+                const piToken = await contract.methods.piToken().call();
+                result.push("   MAO Token: " + maoToken);
+                result.push("   PI Token: " + piToken);
+                result.push("");
+                
+                // 查询钱包地址
+                result.push("💰 钱包地址:");
+                const marketingWallet = await contract.methods.marketingWallet().call();
+                const prizePoolWallet = await contract.methods.prizePoolWallet().call();
+                const profitWallet = await contract.methods.profitWallet().call();
+                result.push("   营销钱包: " + marketingWallet);
+                result.push("   奖金池钱包: " + prizePoolWallet);
+                result.push("   利润钱包: " + profitWallet);
+                result.push("");
+                
+                // 查询管理员信息
+                result.push("👥 管理员信息:");
+                const adminCount = await contract.methods.adminCount().call();
+                result.push("   管理员数量: " + adminCount);
+                result.push("");
+                
+                // 查询游戏配置
+                result.push("🎮 游戏配置:");
+                try {
+                    const maoGameCost = await contract.methods.maoGameCost().call();
+                    const piGameCost = await contract.methods.piGameCost().call();
+                    result.push("   MAO游戏费用: " + web3.utils.fromWei(maoGameCost, 'ether') + " MAO");
+                    result.push("   PI游戏费用: " + web3.utils.fromWei(piGameCost, 'ether') + " PI");
+                } catch (error) {
+                    result.push("   无法获取游戏费用配置");
+                }
+                
+                // 查询分配比例
+                try {
+                    const burnPercentage = await contract.methods.BURN_PERCENTAGE().call();
+                    const marketingPercentage = await contract.methods.MARKETING_PERCENTAGE().call();
+                    const contractPercentage = await contract.methods.CONTRACT_PERCENTAGE().call();
+                    result.push("   销毁比例: " + burnPercentage + "%");
+                    result.push("   营销比例: " + marketingPercentage + "%");
+                    result.push("   合约比例: " + contractPercentage + "%");
+                } catch (error) {
+                    result.push("   无法获取分配比例");
+                }
+                result.push("");
+                
+                result.push("✅ 查询完成！");
+                
+                showResult(result.join('\n'), "success");
+                
+            } catch (error) {
+                showResult("❌ 查询失败: " + error.message, "error");
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        // 页面加载时检查钱包连接
+        window.addEventListener('load', function() {
+            if (typeof window.ethereum !== 'undefined') {
+                showResult("✅ 检测到MetaMask钱包\n请点击'连接钱包'按钮开始查询", "success");
+            } else {
+                showResult("❌ 未检测到MetaMask钱包\n请安装MetaMask后刷新页面", "error");
+            }
+        });
+    </script>
+</body>
+</html> 
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查询合约钱包地址</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 查询合约钱包地址</h1>
+            <p>查询已部署游戏合约的所有钱包地址和配置信息</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <button class="btn" onclick="connectWallet()">连接钱包</button>
+            <button class="btn" onclick="queryAddresses()">查询地址</button>
+            <button class="btn" onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let contract;
+        const CONTRACT_ADDRESS = "0x2Ba6025C49681d55e9a2504C62b2253D2F79e913";
+        
+        const CONTRACT_ABI = [
+            "function marketingWallet() view returns (address)",
+            "function prizePoolWallet() view returns (address)",
+            "function profitWallet() view returns (address)",
+            "function maoToken() view returns (address)",
+            "function piToken() view returns (address)",
+            "function adminCount() view returns (uint256)",
+            "function maoGameCost() view returns (uint256)",
+            "function piGameCost() view returns (uint256)",
+            "function BURN_PERCENTAGE() view returns (uint256)",
+            "function MARKETING_PERCENTAGE() view returns (uint256)",
+            "function CONTRACT_PERCENTAGE() view returns (uint256)"
+        ];
+
+        async function connectWallet() {
+            try {
+                showResult("正在连接钱包...", "loading");
+                
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // 检查网络
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    if (chainId !== '0xed5') { // AlveyChain chainId = 3797 (0xed5)
+                        showResult("❌ 请切换到AlveyChain网络！\n当前网络ID: " + chainId + "\n需要网络ID: 0xed5 (3797)", "error");
+                        return;
+                    }
+                    
+                    web3 = new Web3(window.ethereum);
+                    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+                    
+                    const accounts = await web3.eth.getAccounts();
+                    showResult("✅ 钱包连接成功！\n当前地址: " + accounts[0], "success");
+                } else {
+                    showResult("❌ 请安装MetaMask钱包！", "error");
+                }
+            } catch (error) {
+                showResult("❌ 连接失败: " + error.message, "error");
+            }
+        }
+
+        async function queryAddresses() {
+            try {
+                if (!contract) {
+                    showResult("❌ 请先连接钱包！", "error");
+                    return;
+                }
+                
+                showResult("正在查询合约地址...", "loading");
+                
+                const result = [];
+                result.push("🔍 查询合约钱包地址");
+                result.push("📋 合约地址: " + CONTRACT_ADDRESS);
+                result.push("🌐 网络: AlveyChain");
+                result.push("");
+                
+                // 查询代币地址
+                result.push("🪙 代币地址:");
+                const maoToken = await contract.methods.maoToken().call();
+                const piToken = await contract.methods.piToken().call();
+                result.push("   MAO Token: " + maoToken);
+                result.push("   PI Token: " + piToken);
+                result.push("");
+                
+                // 查询钱包地址
+                result.push("💰 钱包地址:");
+                const marketingWallet = await contract.methods.marketingWallet().call();
+                const prizePoolWallet = await contract.methods.prizePoolWallet().call();
+                const profitWallet = await contract.methods.profitWallet().call();
+                result.push("   营销钱包: " + marketingWallet);
+                result.push("   奖金池钱包: " + prizePoolWallet);
+                result.push("   利润钱包: " + profitWallet);
+                result.push("");
+                
+                // 查询管理员信息
+                result.push("👥 管理员信息:");
+                const adminCount = await contract.methods.adminCount().call();
+                result.push("   管理员数量: " + adminCount);
+                result.push("");
+                
+                // 查询游戏配置
+                result.push("🎮 游戏配置:");
+                try {
+                    const maoGameCost = await contract.methods.maoGameCost().call();
+                    const piGameCost = await contract.methods.piGameCost().call();
+                    result.push("   MAO游戏费用: " + web3.utils.fromWei(maoGameCost, 'ether') + " MAO");
+                    result.push("   PI游戏费用: " + web3.utils.fromWei(piGameCost, 'ether') + " PI");
+                } catch (error) {
+                    result.push("   无法获取游戏费用配置");
+                }
+                
+                // 查询分配比例
+                try {
+                    const burnPercentage = await contract.methods.BURN_PERCENTAGE().call();
+                    const marketingPercentage = await contract.methods.MARKETING_PERCENTAGE().call();
+                    const contractPercentage = await contract.methods.CONTRACT_PERCENTAGE().call();
+                    result.push("   销毁比例: " + burnPercentage + "%");
+                    result.push("   营销比例: " + marketingPercentage + "%");
+                    result.push("   合约比例: " + contractPercentage + "%");
+                } catch (error) {
+                    result.push("   无法获取分配比例");
+                }
+                result.push("");
+                
+                result.push("✅ 查询完成！");
+                
+                showResult(result.join('\n'), "success");
+                
+            } catch (error) {
+                showResult("❌ 查询失败: " + error.message, "error");
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'none';
+        }
+
+        // 页面加载时检查钱包连接
+        window.addEventListener('load', function() {
+            if (typeof window.ethereum !== 'undefined') {
+                showResult("✅ 检测到MetaMask钱包\n请点击'连接钱包'按钮开始查询", "success");
+            } else {
+                showResult("❌ 未检测到MetaMask钱包\n请安装MetaMask后刷新页面", "error");
+            }
+        });
+    </script>
+</body>
+</html> 

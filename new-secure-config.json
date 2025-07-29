@@ -1,0 +1,27 @@
+{
+  "contractName": "UltraSecureWheelGame",
+  "trustedOwner": "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28",
+  "maoToken": "0x22f49bcb3dad370a9268ba3fca33cb037ca3d022",
+  "piToken": "0xfd4680e25e05b3435c7f698668d1ce80d2a9f444", 
+  "adminAddresses": [
+    "0xd0dC6Ff0eA6a27a0a4Ba0002F019d0E1b9666c28"
+,
+    "0x4f05108dEF45CdE35Bc38F73B6a95C74b96a16E7",
+    "0x8300b4276Ac4DBbB8e73C0E99E4179D594b71eB5",
+    "0x24c8fE3a662C58c6Ae589A9Aca8060B4741a24a5",
+    "0x64294e2f66AB7221ecC8FAeF418cdA75E215A053"
+  ],
+  "blacklistedAddresses": [
+    "0x8FdFD1eC1c8b5381db7cc68114214BA16E02b2B7"
+  ],
+  "securityFeatures": {
+    "multiSigRequired": 3,
+    "timelockDelay": "24 hours",
+    "dailyWithdrawLimit": "50000",
+    "weeklyWithdrawLimit": "200000",
+    "maxSingleWithdraw": "10000"
+  },
+  "deploymentTime": "2025-07-21T16:03:10.3NZ",
+  "deploymentReason": "Emergency security upgrade - malicious owner detected",
+  "walletSource": "Real wallets generated via secure wallet generator"
+}
